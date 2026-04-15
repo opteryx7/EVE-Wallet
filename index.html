@@ -835,7 +835,7 @@ function selectWalletType(type) {
 
 function getScopes() {
   return walletType === 'corp'
-    ? 'esi-wallet.read_corporation_wallets.v1 esi-corporations.read_corporation_membership.v1'
+    ? 'esi-wallet.read_corporation_wallets.v1'
     : 'esi-wallet.read_character_wallet.v1';
 }
 
@@ -849,7 +849,7 @@ async function startLogin() {
   const params = new URLSearchParams({
     response_type: 'code',
     redirect_uri: CALLBACK,
-    client_id: clientId,
+    client_id: CLIENT_ID,
     scope: getScopes(),
     state: 'evewallet',
     code_challenge: challenge,
