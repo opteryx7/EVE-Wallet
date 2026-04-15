@@ -135,13 +135,14 @@
   /* ── LOGIN SCREEN ── */
   #login-screen {
     min-height: calc(100vh - 64px);
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     flex-direction: column;
     gap: 2rem;
     text-align: center;
   }
+  #login-screen.visible { display: flex; }
 
   .login-card {
     background: var(--bg2);
@@ -1223,7 +1224,7 @@ function exportCSV() {
 function logout() {
   localStorage.removeItem(TOKEN_STORAGE);
   localStorage.removeItem(DATA_STORAGE);
-  document.getElementById('login-screen').style.display = '';
+  document.getElementById('login-screen').classList.add('visible');
   document.getElementById('dashboard').style.display = 'none';
   setStatus(false);
 }
@@ -1251,6 +1252,7 @@ document.getElementById('journal-search').addEventListener('input', () => render
 document.getElementById('journal-filter').addEventListener('change', () => renderJournal(filterByPeriod(allEntries, currentPeriod)));
 
 async function init() {
+  document.getElementById('login-screen').classList.add('visible');
   const params = new URLSearchParams(location.search);
   const code = params.get('code');
 
@@ -1262,7 +1264,7 @@ async function init() {
 
   const tokenData = JSON.parse(localStorage.getItem(TOKEN_STORAGE) || 'null');
   if (!tokenData) {
-    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('login-screen').classList.add('visible');
     hideLoading();
     return;
   }
@@ -1271,7 +1273,7 @@ async function init() {
   showLoading('데이터 로딩 중...');
   const ok = await loadData();
   if (!ok) {
-    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('login-screen').classList.add('visible');
     hideLoading();
     return;
   }
@@ -1286,7 +1288,7 @@ async function init() {
   img.onerror = () => { av.textContent = name.slice(0,2).toUpperCase(); };
   av.appendChild(img);
 
-  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('login-screen').classList.remove('visible');
   document.getElementById('dashboard').style.display = '';
   setStatus(true);
   renderDashboard();
