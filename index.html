@@ -709,9 +709,6 @@
       <div class="login-title">EVE WALLET LENS</div>
       <div class="login-desc">EVE SSO로 로그인하면 지갑 데이터를 분석할 수 있어요.<br>데이터는 브라우저에서만 처리되며 서버에 저장되지 않습니다.</div>
 
-      <label class="input-label">Client ID (EVE Developer Portal)</label>
-      <input class="client-id-input" id="client-id-input" type="text" placeholder="발급받은 Client ID를 입력하세요" autocomplete="off">
-
       <div class="wallet-type-selector">
         <div class="wallet-type-btn active" id="btn-personal" onclick="selectWalletType('personal')">
           <span class="wallet-type-icon">👤</span>
@@ -728,7 +725,6 @@
       </button>
 
       <div style="margin-top: 1rem; font-size: 11px; color: var(--text3); line-height: 1.6;">
-        Client ID는 <a href="https://developers.eveonline.com" target="_blank" style="color: var(--accent2);">developers.eveonline.com</a>에서 발급하세요.<br>
         콥 지갑은 Accountant 권한이 필요합니다.
       </div>
     </div>
@@ -814,7 +810,7 @@
 </div>
 
 <script>
-const CLIENT_ID_STORAGE = 'eve_wallet_client_id';
+const CLIENT_ID = 'cdadeb67014b4a908d2508028b922448';
 const TOKEN_STORAGE = 'eve_wallet_token';
 const DATA_STORAGE = 'eve_wallet_data';
 const ESI = 'https://esi.evetech.net/latest';
@@ -843,9 +839,6 @@ function getScopes() {
 }
 
 async function startLogin() {
-  const clientId = document.getElementById('client-id-input').value.trim();
-  if (!clientId) { showToast('Client ID를 입력하세요', 'error'); return; }
-  localStorage.setItem(CLIENT_ID_STORAGE, clientId);
   localStorage.setItem('eve_wallet_type', walletType);
 
   const verifier = generateVerifier();
@@ -884,7 +877,7 @@ async function handleCallback() {
 
   history.replaceState({}, '', location.pathname);
 
-  const clientId = localStorage.getItem(CLIENT_ID_STORAGE);
+  const clientId = CLIENT_ID;
   const verifier = sessionStorage.getItem('pkce_verifier');
   walletType = localStorage.getItem('eve_wallet_type') || 'personal';
 
@@ -1258,23 +1251,30 @@ document.getElementById('journal-search').addEventListener('input', () => render
 document.getElementById('journal-filter').addEventListener('change', () => renderJournal(filterByPeriod(allEntries, currentPeriod)));
 
 async function init() {
-  const clientId = localStorage.getItem(CLIENT_ID_STORAGE);
-  if (clientId) document.getElementById('client-id-input').value = clientId;
-
   const params = new URLSearchParams(location.search);
   const code = params.get('code');
 
   if (code) {
+    showLoading('인증 처리 중...');
     const ok = await handleCallback();
     if (!ok) { hideLoading(); return; }
   }
 
   const tokenData = JSON.parse(localStorage.getItem(TOKEN_STORAGE) || 'null');
-  if (!tokenData) { hideLoading(); return; }
+  if (!tokenData) {
+    document.getElementById('login-screen').style.display = 'flex';
+    hideLoading();
+    return;
+  }
 
   walletType = localStorage.getItem('eve_wallet_type') || 'personal';
+  showLoading('데이터 로딩 중...');
   const ok = await loadData();
-  if (!ok) { hideLoading(); return; }
+  if (!ok) {
+    document.getElementById('login-screen').style.display = 'flex';
+    hideLoading();
+    return;
+  }
 
   const name = charInfo.CharacterName;
   document.getElementById('char-name').textContent = name;
