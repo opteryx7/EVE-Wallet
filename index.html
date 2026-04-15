@@ -1044,17 +1044,17 @@ function renderDashboard() {
   const sg = document.getElementById('stat-grid');
   sg.innerHTML = `
     <div class="stat-card">
-      <div class="stat-label">총 세금 수입</div>
+      <div class="stat-label">총 ISK 수입</div>
       <div class="stat-value">${fmtISK(totalTax)}<span class="stat-unit">ISK</span></div>
       <div class="stat-sub">${taxEntries.length}건</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">납부 캐릭터</div>
+      <div class="stat-label">활동 캐릭터</div>
       <div class="stat-value">${sortedChars.length}<span class="stat-unit">명</span></div>
       <div class="stat-sub">${walletType === 'corp' ? '콥 지갑' : '개인 지갑'}</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">최다 납부</div>
+      <div class="stat-label">최고 수입</div>
       <div class="stat-value" style="font-size:16px; padding-top:5px;">${sortedChars[0]?.[0] || '—'}</div>
       <div class="stat-sub">${sortedChars[0] ? fmtISK(sortedChars[0][1]) + ' ISK' : ''}</div>
     </div>
@@ -1143,7 +1143,7 @@ function renderDashboard() {
   const maxTax = sortedChars[0]?.[1] || 1;
   const tc = document.getElementById('table-chars');
   tc.innerHTML = `<thead><tr>
-    <th>#</th><th>캐릭터</th><th style="text-align:right">납부 세금</th><th style="text-align:right">비중</th><th>비율</th>
+    <th>#</th><th>캐릭터</th><th style="text-align:right">ISK 수입</th><th style="text-align:right">비중</th><th>비율</th>
   </tr></thead><tbody>${sortedChars.map(([char, tax], i) => `
     <tr>
       <td class="rank">${i+1}</td>
@@ -1289,7 +1289,7 @@ async function init() {
   av.appendChild(img);
 
   document.getElementById('login-screen').classList.remove('visible');
-  document.getElementById('dashboard').style.display = '';
+  document.getElementById('dashboard').style.display = 'block';
   setStatus(true);
   renderDashboard();
   hideLoading();
