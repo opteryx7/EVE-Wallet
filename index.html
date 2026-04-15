@@ -708,25 +708,25 @@
   <div id="login-screen">
     <div class="login-card">
       <div class="login-title">EVE WALLET LENS</div>
-      <div class="login-desc">EVE SSO로 로그인하면 지갑 데이터를 분석할 수 있어요.<br>데이터는 브라우저에서만 처리되며 서버에 저장되지 않습니다.</div>
+      <div class="login-desc">Sign in with EVE SSO to analyze your wallet data.<br>All data is processed in your browser only.</div>
 
       <div class="wallet-type-selector">
         <div class="wallet-type-btn active" id="btn-personal" onclick="selectWalletType('personal')">
           <span class="wallet-type-icon">👤</span>
-          개인 지갑
+          Personal Wallet
         </div>
         <div class="wallet-type-btn" id="btn-corp" onclick="selectWalletType('corp')">
           <span class="wallet-type-icon">🏢</span>
-          콥 지갑
+          Corp Wallet
         </div>
       </div>
 
       <button class="btn-primary" id="login-btn" onclick="startLogin()">
-        EVE SSO 로그인
+        LOGIN WITH EVE SSO
       </button>
 
       <div style="margin-top: 1rem; font-size: 11px; color: var(--text3); line-height: 1.6;">
-        콥 지갑은 Accountant 권한이 필요합니다.
+        Corp wallet requires Accountant role.
       </div>
     </div>
   </div>
@@ -734,12 +734,9 @@
   <!-- 대시보드 -->
   <div id="dashboard">
     <div class="dash-header">
-      <div class="char-info">
-        <div class="char-avatar" id="char-avatar"></div>
-        <div>
-          <div class="char-name" id="char-name">—</div>
-          <div class="char-corp" id="char-corp">—</div>
-        </div>
+      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+        <div class="char-info" id="char-list" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+        <button class="btn-sm" onclick="addCharacter()" style="border-color: var(--accent3); color: var(--accent3);">+ Add Character</button>
       </div>
       <div class="dash-actions">
         <div class="period-bar">
@@ -748,8 +745,8 @@
           <button class="period-btn" onclick="setPeriod(30)">30D</button>
           <button class="period-btn" onclick="setPeriod(0)">ALL</button>
         </div>
-        <button class="btn-sm" onclick="exportCSV()">CSV 저장</button>
-        <button class="btn-sm" onclick="logout()">로그아웃</button>
+        <button class="btn-sm" onclick="exportCSV()">Export CSV</button>
+        <button class="btn-sm" onclick="logout()">Logout</button>
       </div>
     </div>
 
@@ -759,9 +756,9 @@
     <!-- 탭 -->
     <div class="full-panel">
       <div class="tab-bar">
-        <button class="tab active" onclick="switchTab('overview')">개요</button>
-        <button class="tab" onclick="switchTab('chars')">캐릭터별</button>
-        <button class="tab" onclick="switchTab('journal')">전체 내역</button>
+        <button class="tab active" onclick="switchTab('overview')">Overview</button>
+        <button class="tab" onclick="switchTab('chars')">By Character</button>
+        <button class="tab" onclick="switchTab('journal')">Journal</button>
       </div>
 
       <!-- 개요 탭 -->
@@ -769,12 +766,12 @@
         <div style="padding: 1.25rem;">
           <div class="panel-grid">
             <div>
-              <div class="panel-title" style="margin-bottom: 12px;">소득 유형별 세금</div>
-              <div class="chart-wrap"><canvas id="chart-type" role="img" aria-label="소득 유형별 세금 차트"></canvas></div>
+              <div class="panel-title" style="margin-bottom: 12px;">Income by Type</div>
+              <div class="chart-wrap"><canvas id="chart-type" role="img" aria-label="Income by type chart"></canvas></div>
             </div>
             <div>
-              <div class="panel-title" style="margin-bottom: 12px;">일별 세금 추이</div>
-              <div class="chart-wrap"><canvas id="chart-trend" role="img" aria-label="일별 세금 추이 차트"></canvas></div>
+              <div class="panel-title" style="margin-bottom: 12px;">Daily Income</div>
+              <div class="chart-wrap"><canvas id="chart-trend" role="img" aria-label="Daily income chart"></canvas></div>
             </div>
           </div>
         </div>
@@ -784,7 +781,7 @@
       <div id="tab-chars" style="display:none;">
         <div style="padding: 1.25rem 1.25rem 0;">
           <div class="chart-wrap" style="height: 220px; margin-bottom: 1rem;">
-            <canvas id="chart-chars" role="img" aria-label="캐릭터별 세금 납부액 차트"></canvas>
+            <canvas id="chart-chars" role="img" aria-label="ISK income by character chart"></canvas>
           </div>
         </div>
         <div class="table-scroll">
@@ -795,9 +792,9 @@
       <!-- 전체 내역 탭 -->
       <div id="tab-journal" style="display:none;">
         <div style="padding: 12px 1.25rem; border-bottom: 1px solid var(--border); display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-          <input class="client-id-input" id="journal-search" style="margin:0; width: 220px; padding: 7px 12px;" placeholder="캐릭터명 또는 유형 검색...">
+          <input class="client-id-input" id="journal-search" style="margin:0; width: 220px; padding: 7px 12px;" placeholder="Search by character or type...">
           <select id="journal-filter" class="client-id-input" style="margin:0; width: 180px; padding: 7px 12px;">
-            <option value="">전체 유형</option>
+            <option value="">All Types</option>
           </select>
         </div>
         <div class="table-scroll">
@@ -814,6 +811,7 @@
 const CLIENT_ID = 'cdadeb67014b4a908d2508028b922448';
 const TOKEN_STORAGE = 'eve_wallet_token';
 const DATA_STORAGE = 'eve_wallet_data';
+const CHARS_STORAGE = 'eve_wallet_chars';
 const ESI = 'https://esi.evetech.net/latest';
 const SSO_AUTH = 'https://login.eveonline.com/v2/oauth/authorize';
 const SSO_TOKEN = 'https://login.eveonline.com/v2/oauth/token';
@@ -826,6 +824,52 @@ let charInfo = null;
 let corpId = null;
 let currentPeriod = 7;
 let charts = {};
+let registeredChars = [];
+let activeCharIdx = 0;
+
+function saveChars() {
+  localStorage.setItem(CHARS_STORAGE, JSON.stringify(registeredChars));
+}
+
+function loadChars() {
+  return JSON.parse(localStorage.getItem(CHARS_STORAGE) || '[]');
+}
+
+function addCharacter() {
+  localStorage.setItem('eve_adding_char', '1');
+  localStorage.setItem('eve_wallet_type', walletType);
+  startLogin();
+}
+
+function renderCharList() {
+  const el = document.getElementById('char-list');
+  el.innerHTML = registeredChars.map((c, i) => `
+    <div style="display:flex; align-items:center; gap:6px; background:${i===activeCharIdx?'rgba(0,212,255,0.08)':'var(--bg3)'}; border:1px solid ${i===activeCharIdx?'var(--accent)':'var(--border)'}; border-radius:4px; padding:6px 10px; cursor:pointer;" onclick="switchChar(${i})">
+      <img src="https://images.evetech.net/characters/${c.charId}/portrait?size=32" style="width:24px;height:24px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'">
+      <span style="font-size:13px; color:${i===activeCharIdx?'var(--accent)':'var(--text2)'};">${c.charName}</span>
+      <span style="font-size:10px; color:var(--text3); font-family:'Share Tech Mono',monospace;">${c.walletType==='corp'?'CORP':'PERSONAL'}</span>
+      ${registeredChars.length > 1 ? `<span style="color:var(--text3); font-size:12px; cursor:pointer; margin-left:4px;" onclick="event.stopPropagation(); removeChar(${i})">×</span>` : ''}
+    </div>
+  `).join('');
+}
+
+function switchChar(idx) {
+  activeCharIdx = idx;
+  allEntries = JSON.parse(localStorage.getItem(DATA_STORAGE + '_' + idx) || '[]');
+  renderCharList();
+  renderDashboard();
+}
+
+function removeChar(idx) {
+  registeredChars.splice(idx, 1);
+  localStorage.removeItem(DATA_STORAGE + '_' + idx);
+  saveChars();
+  if (registeredChars.length === 0) { logout(); return; }
+  activeCharIdx = 0;
+  allEntries = JSON.parse(localStorage.getItem(DATA_STORAGE + '_0') || '[]');
+  renderCharList();
+  renderDashboard();
+}
 
 function selectWalletType(type) {
   walletType = type;
@@ -906,42 +950,43 @@ async function handleCallback() {
   }
 }
 
-async function loadData() {
+async function loadData(charIdx) {
   const tokenData = JSON.parse(localStorage.getItem(TOKEN_STORAGE) || 'null');
   if (!tokenData) return false;
 
   const accessToken = tokenData.access_token;
 
-  showLoading('캐릭터 정보 조회 중...');
+  showLoading('Fetching character info...');
   try {
     const verify = await fetch(SSO_VERIFY, { headers: { Authorization: `Bearer ${accessToken}` } });
     charInfo = await verify.json();
-    if (!charInfo.CharacterID) throw new Error('캐릭터 정보 조회 실패');
+    if (!charInfo.CharacterID) throw new Error('Failed to fetch character info');
   } catch(e) {
-    showToast('인증 만료. 다시 로그인하세요.', 'error');
+    showToast('Session expired. Please login again.', 'error');
     hideLoading();
     return false;
   }
 
-  const existing = JSON.parse(localStorage.getItem(DATA_STORAGE) || '[]');
+  const storageKey = DATA_STORAGE + '_' + charIdx;
+  const existing = JSON.parse(localStorage.getItem(storageKey) || '[]');
   const existingIds = new Set(existing.map(e => e.id));
   let newEntries = [];
 
   if (walletType === 'corp') {
-    showLoading('콥 정보 조회 중...');
-    const corpRes = await fetch(`${ESI}/characters/${charInfo.CharacterID}/`, { headers: { Authorization: `Bearer ${tokenData.access_token}` } });
+    showLoading('Fetching corp info...');
+    const corpRes = await fetch(`${ESI}/characters/${charInfo.CharacterID}/`, { headers: { Authorization: `Bearer ${accessToken}` } });
     const corpData = await corpRes.json();
     corpId = corpData.corporation_id;
 
     for (let div = 1; div <= 7; div++) {
-      showLoading(`콥 지갑 Division ${div}/7 수집 중...`);
-      const entries = await fetchAllPages(`${ESI}/corporations/${corpId}/wallets/${div}/journal/`, tokenData.access_token);
+      showLoading(`Fetching corp wallet Division ${div}/7...`);
+      const entries = await fetchAllPages(`${ESI}/corporations/${corpId}/wallets/${div}/journal/`, accessToken);
       entries.forEach(e => { e.division = div; e.wallet_type = 'corp'; });
       newEntries.push(...entries);
     }
   } else {
-    showLoading('개인 지갑 수집 중...');
-    const entries = await fetchAllPages(`${ESI}/characters/${charInfo.CharacterID}/wallet/journal/`, tokenData.access_token);
+    showLoading('Fetching personal wallet...');
+    const entries = await fetchAllPages(`${ESI}/characters/${charInfo.CharacterID}/wallet/journal/`, accessToken);
     entries.forEach(e => { e.wallet_type = 'personal'; });
     newEntries.push(...entries);
   }
@@ -951,9 +996,9 @@ async function loadData() {
     if (!existingIds.has(e.id)) { existing.push(e); added++; }
   });
 
-  localStorage.setItem(DATA_STORAGE, JSON.stringify(existing));
+  localStorage.setItem(storageKey, JSON.stringify(existing));
   allEntries = existing;
-  showToast(`${added}건 신규 추가 (총 ${existing.length}건)`, 'success');
+  showToast(`${added} new entries added (total: ${existing.length})`, 'success');
   return true;
 }
 
@@ -1044,22 +1089,22 @@ function renderDashboard() {
   const sg = document.getElementById('stat-grid');
   sg.innerHTML = `
     <div class="stat-card">
-      <div class="stat-label">총 ISK 수입</div>
+      <div class="stat-label">Total ISK Income</div>
       <div class="stat-value">${fmtISK(totalTax)}<span class="stat-unit">ISK</span></div>
-      <div class="stat-sub">${taxEntries.length}건</div>
+      <div class="stat-sub">${taxEntries.length} entries</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">활동 캐릭터</div>
-      <div class="stat-value">${sortedChars.length}<span class="stat-unit">명</span></div>
-      <div class="stat-sub">${walletType === 'corp' ? '콥 지갑' : '개인 지갑'}</div>
+      <div class="stat-label">Active Characters</div>
+      <div class="stat-value">${sortedChars.length}<span class="stat-unit"></span></div>
+      <div class="stat-sub">${walletType === 'corp' ? 'Corp Wallet' : 'Personal Wallet'}</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">최고 수입</div>
+      <div class="stat-label">Top Earner</div>
       <div class="stat-value" style="font-size:16px; padding-top:5px;">${sortedChars[0]?.[0] || '—'}</div>
       <div class="stat-sub">${sortedChars[0] ? fmtISK(sortedChars[0][1]) + ' ISK' : ''}</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">활성 기간</div>
+      <div class="stat-label">Period</div>
       <div class="stat-value" style="font-size:16px; padding-top:5px;">${dates[0]||'—'}</div>
       <div class="stat-sub">~ ${dates[dates.length-1]||'—'}</div>
     </div>
@@ -1093,7 +1138,7 @@ function renderDashboard() {
     data: {
       labels: dates,
       datasets: [{
-        label: '세금 (M ISK)',
+        label: 'Income (M ISK)',
         data: dates.map(d => Math.round(dateTax[d]/1e4)/100),
         borderColor: '#00d4ff',
         backgroundColor: 'rgba(0,212,255,0.06)',
@@ -1143,7 +1188,7 @@ function renderDashboard() {
   const maxTax = sortedChars[0]?.[1] || 1;
   const tc = document.getElementById('table-chars');
   tc.innerHTML = `<thead><tr>
-    <th>#</th><th>캐릭터</th><th style="text-align:right">ISK 수입</th><th style="text-align:right">비중</th><th>비율</th>
+    <th>#</th><th>Character</th><th style="text-align:right">ISK Income</th><th style="text-align:right">Share</th><th>Bar</th>
   </tr></thead><tbody>${sortedChars.map(([char, tax], i) => `
     <tr>
       <td class="rank">${i+1}</td>
@@ -1159,7 +1204,7 @@ function renderDashboard() {
   // 유형 필터 옵션
   const sel = document.getElementById('journal-filter');
   const types = [...new Set(filtered.map(e => e.ref_type).filter(Boolean))].sort();
-  sel.innerHTML = '<option value="">전체 유형</option>' + types.map(t => `<option value="${t}">${t.replace(/_/g,' ')}</option>`).join('');
+  sel.innerHTML = '<option value="">All Types</option>' + types.map(t => `<option value="${t}">${t.replace(/_/g,' ')}</option>`).join('');
 }
 
 function renderJournal(entries) {
@@ -1172,11 +1217,11 @@ function renderJournal(entries) {
 
   const tj = document.getElementById('table-journal');
   if (!rows.length) {
-    tj.innerHTML = '<tbody><tr><td colspan="6" class="empty">데이터 없음</td></tr></tbody>';
+    tj.innerHTML = '<tbody><tr><td colspan="6" class="empty">NO DATA</td></tr></tbody>';
     return;
   }
   tj.innerHTML = `<thead><tr>
-    <th>날짜</th><th>유형</th><th>설명</th><th style="text-align:right">금액</th><th style="text-align:right">세금</th><th style="text-align:right">잔액</th>
+    <th>Date</th><th>Type</th><th>Description</th><th style="text-align:right">Amount</th><th style="text-align:right">Tax</th><th style="text-align:right">Balance</th>
   </tr></thead><tbody>${rows.slice(0,500).map(e => `
     <tr>
       <td style="font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--text3); white-space:nowrap">${e.date.slice(0,10)}</td>
@@ -1186,7 +1231,7 @@ function renderJournal(entries) {
       <td class="num" style="color:${parseFloat(e.tax||0)>0?'var(--gold)':'var(--text3)'}">${parseFloat(e.tax||0)>0?fmtISK(parseFloat(e.tax||0)):'-'}</td>
       <td class="num" style="color:var(--text2)">${fmtISK(Math.abs(parseFloat(e.balance||0)))}</td>
     </tr>`).join('')}
-  ${rows.length > 500 ? `<tr><td colspan="6" class="empty">상위 500건 표시 중 (전체 ${rows.length}건)</td></tr>` : ''}
+  ${rows.length > 500 ? `<tr><td colspan="6" class="empty">Showing top 500 of ${rows.length} entries</td></tr>` : ''}
   </tbody>`;
 }
 
@@ -1211,19 +1256,23 @@ function destroyChart(id) {
 
 function exportCSV() {
   const filtered = filterByPeriod(allEntries, currentPeriod);
-  if (!filtered.length) { showToast('데이터 없음', 'error'); return; }
+  if (!filtered.length) { showToast('No data', 'error'); return; }
   const keys = [...new Set(filtered.flatMap(e => Object.keys(e)))];
   const csv = [keys.join(','), ...filtered.map(e => keys.map(k => JSON.stringify(e[k]??'')).join(','))].join('\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
   a.download = `eve_wallet_${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
-  showToast('CSV 저장 완료', 'success');
+  showToast('CSV exported', 'success');
 }
 
 function logout() {
   localStorage.removeItem(TOKEN_STORAGE);
-  localStorage.removeItem(DATA_STORAGE);
+  localStorage.removeItem(CHARS_STORAGE);
+  for (let i = 0; i < 10; i++) localStorage.removeItem(DATA_STORAGE + '_' + i);
+  registeredChars = [];
+  allEntries = [];
+  activeCharIdx = 0;
   document.getElementById('login-screen').classList.add('visible');
   document.getElementById('dashboard').style.display = 'none';
   setStatus(false);
@@ -1247,7 +1296,6 @@ function setStatus(online) {
   document.getElementById('status-dot').className = 'status-dot' + (online ? ' online' : '');
   document.getElementById('status-text').textContent = online ? 'ONLINE' : 'OFFLINE';
 }
-
 document.getElementById('journal-search').addEventListener('input', () => renderJournal(filterByPeriod(allEntries, currentPeriod)));
 document.getElementById('journal-filter').addEventListener('change', () => renderJournal(filterByPeriod(allEntries, currentPeriod)));
 
@@ -1257,37 +1305,48 @@ async function init() {
   const code = params.get('code');
 
   if (code) {
-    showLoading('인증 처리 중...');
+    showLoading('Authenticating...');
     const ok = await handleCallback();
     if (!ok) { hideLoading(); return; }
   }
 
   const tokenData = JSON.parse(localStorage.getItem(TOKEN_STORAGE) || 'null');
-  if (!tokenData) {
-    document.getElementById('login-screen').classList.add('visible');
-    hideLoading();
-    return;
-  }
+  if (!tokenData) { hideLoading(); return; }
 
   walletType = localStorage.getItem('eve_wallet_type') || 'personal';
-  showLoading('데이터 로딩 중...');
-  const ok = await loadData();
-  if (!ok) {
-    document.getElementById('login-screen').classList.add('visible');
-    hideLoading();
-    return;
+  registeredChars = loadChars();
+  const isAddingChar = localStorage.getItem('eve_adding_char') === '1';
+  localStorage.removeItem('eve_adding_char');
+
+  showLoading('Loading wallet data...');
+  const ok = await loadData(isAddingChar ? registeredChars.length : activeCharIdx);
+  if (!ok) { hideLoading(); return; }
+
+  const charEntry = {
+    charId: charInfo.CharacterID,
+    charName: charInfo.CharacterName,
+    walletType,
+    token: tokenData
+  };
+
+  if (isAddingChar) {
+    const exists = registeredChars.findIndex(c => c.charId === charInfo.CharacterID);
+    if (exists >= 0) {
+      registeredChars[exists] = charEntry;
+      activeCharIdx = exists;
+    } else {
+      activeCharIdx = registeredChars.length;
+      registeredChars.push(charEntry);
+    }
+  } else {
+    if (registeredChars.length === 0) {
+      registeredChars.push(charEntry);
+      activeCharIdx = 0;
+    }
   }
+  saveChars();
 
-  const name = charInfo.CharacterName;
-  document.getElementById('char-name').textContent = name;
-  document.getElementById('char-corp').textContent = walletType === 'corp' ? `CORP ID: ${corpId}` : 'PERSONAL WALLET';
-
-  const av = document.getElementById('char-avatar');
-  const img = document.createElement('img');
-  img.src = `https://images.evetech.net/characters/${charInfo.CharacterID}/portrait?size=64`;
-  img.onerror = () => { av.textContent = name.slice(0,2).toUpperCase(); };
-  av.appendChild(img);
-
+  renderCharList();
   document.getElementById('login-screen').classList.remove('visible');
   document.getElementById('dashboard').style.display = 'block';
   setStatus(true);
