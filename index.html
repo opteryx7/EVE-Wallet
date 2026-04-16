@@ -344,25 +344,31 @@ async function resolveTypeNames(typeIds){
 async function resolveLocationNames(locIds,token){
   const needed=[...new Set(locIds)].filter(id=>!nameCache.locations[id]);
   if(!needed.length)return;
-  // 스테이션 (id < 1e12)
+  // 스테이션 (id < 1e12) - 배치로 한번에
   const stationIds=needed.filter(id=>id<1e12);
   for(let i=0;i<stationIds.length;i+=1000){
     const chunk=stationIds.slice(i,i+1000);
     try{const r=await fetch(`${ESI}/universe/names/`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(chunk)});if(r.ok){const data=await r.json();data.forEach(d=>nameCache.locations[d.id]=d.name);}}catch(e){}
   }
-  // 구조물 (id >= 1e12) - 인증 필요
+  // 구조물 (id >= 1e12) - 병렬 처리 + 타임아웃
   const structIds=needed.filter(id=>id>=1e12);
-  if(structIds.length&&token){
-    for(const sid of structIds){
-      if(nameCache.locations[sid])continue;
-      try{
-        const r=await fetch(`${ESI}/universe/structures/${sid}/`,{headers:{Authorization:`Bearer ${token}`}});
-        if(r.ok){const d=await r.json();nameCache.locations[sid]=d.name||`Structure ${sid}`;}
-        else nameCache.locations[sid]=`Structure ${sid}`;
-      }catch(e){nameCache.locations[sid]=`Structure ${sid}`;}
-    }
-  } else {
-    structIds.forEach(id=>{if(!nameCache.locations[id])nameCache.locations[id]=`Structure ${id}`;});
+  if(!structIds.length)return;
+  if(!token){structIds.forEach(id=>{nameCache.locations[id]=`Structure ${id}`;});return;}
+  const fetchWithTimeout=async(url,opts,ms=5000)=>{
+    const ctrl=new AbortController();
+    const tid=setTimeout(()=>ctrl.abort(),ms);
+    try{const r=await fetch(url,{...opts,signal:ctrl.signal});clearTimeout(tid);return r;}
+    catch(e){clearTimeout(tid);return null;}
+  };
+  // 최대 10개씩 병렬
+  for(let i=0;i<structIds.length;i+=10){
+    const chunk=structIds.slice(i,i+10);
+    await Promise.all(chunk.map(async sid=>{
+      if(nameCache.locations[sid])return;
+      const r=await fetchWithTimeout(`${ESI}/universe/structures/${sid}/`,{headers:{Authorization:`Bearer ${token}`}},5000);
+      if(r&&r.ok){try{const d=await r.json();nameCache.locations[sid]=d.name||`Structure ${sid}`;}catch(e){nameCache.locations[sid]=`Structure ${sid}`;}}
+      else nameCache.locations[sid]=`Structure ${sid}`;
+    }));
   }
 }
 
