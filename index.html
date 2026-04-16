@@ -306,12 +306,13 @@ const SSO_TOKEN='https://login.eveonline.com/v2/oauth/token';
 const SSO_VERIFY='https://login.eveonline.com/oauth/verify';
 const CB=location.origin+location.pathname;
 const LP_RATE=1500;
-const SCOPES=['esi-wallet.read_character_wallet.v1','esi-wallet.read_corporation_wallets.v1','esi-assets.read_assets.v1','esi-assets.read_corporation_assets.v1','esi-characters.read_loyalty.v1','esi-skills.read_skills.v1','esi-markets.read_character_orders.v1','esi-markets.read_corporation_orders.v1','esi-contracts.read_character_contracts.v1','esi-contracts.read_corporation_contracts.v1'].join(' ');
+const SCOPES=['esi-wallet.read_character_wallet.v1','esi-wallet.read_corporation_wallets.v1','esi-assets.read_assets.v1','esi-assets.read_corporation_assets.v1','esi-characters.read_loyalty.v1','esi-skills.read_skills.v1','esi-markets.read_character_orders.v1','esi-markets.read_corporation_orders.v1','esi-contracts.read_character_contracts.v1','esi-contracts.read_corporation_contracts.v1','esi-universe.read_structures.v1'].join(' ');
 
 let walletType='personal',registeredChars=[],charDataCache={},currentPeriod=7,charts={};
 let activeAssetChar='all',activeJournalChar='all',activeOrdersChar='all',activeLPChar='all';
 let assetView='list';
 let nameCache={types:{},locations:{}};
+let assetSortCol='totalValue',assetSortDir='desc';
 
 // ── UTILS ──
 function fmtISK(v){if(v===null||v===undefined)return'—';const a=Math.abs(v),s=v<0?'-':'';if(a>=1e12)return s+(a/1e12).toFixed(2)+'T';if(a>=1e9)return s+(a/1e9).toFixed(2)+'B';if(a>=1e6)return s+(a/1e6).toFixed(2)+'M';if(a>=1e3)return s+(a/1e3).toFixed(1)+'K';return s+Math.round(a).toLocaleString();}
@@ -340,23 +341,29 @@ async function resolveTypeNames(typeIds){
   }catch(e){}
 }
 
-async function resolveLocationNames(locIds){
+async function resolveLocationNames(locIds,token){
   const needed=[...new Set(locIds)].filter(id=>!nameCache.locations[id]);
   if(!needed.length)return;
-  try{
-    // 스테이션
-    const stationIds=needed.filter(id=>id<1e12);
-    for(let i=0;i<stationIds.length;i+=100){
-      const chunk=stationIds.slice(i,i+100);
+  // 스테이션 (id < 1e12)
+  const stationIds=needed.filter(id=>id<1e12);
+  for(let i=0;i<stationIds.length;i+=1000){
+    const chunk=stationIds.slice(i,i+1000);
+    try{const r=await fetch(`${ESI}/universe/names/`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(chunk)});if(r.ok){const data=await r.json();data.forEach(d=>nameCache.locations[d.id]=d.name);}}catch(e){}
+  }
+  // 구조물 (id >= 1e12) - 인증 필요
+  const structIds=needed.filter(id=>id>=1e12);
+  if(structIds.length&&token){
+    for(const sid of structIds){
+      if(nameCache.locations[sid])continue;
       try{
-        const r=await fetch(`${ESI}/universe/names/`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(chunk)});
-        if(r.ok){const data=await r.json();data.forEach(d=>{nameCache.locations[d.id]=d.name;});}
-      }catch(e){}
+        const r=await fetch(`${ESI}/universe/structures/${sid}/`,{headers:{Authorization:`Bearer ${token}`}});
+        if(r.ok){const d=await r.json();nameCache.locations[sid]=d.name||`Structure ${sid}`;}
+        else nameCache.locations[sid]=`Structure ${sid}`;
+      }catch(e){nameCache.locations[sid]=`Structure ${sid}`;}
     }
-    // 구조물 (이름 조회 불가능한 경우 ID 그대로)
-    const structIds=needed.filter(id=>id>=1e12);
+  } else {
     structIds.forEach(id=>{if(!nameCache.locations[id])nameCache.locations[id]=`Structure ${id}`;});
-  }catch(e){}
+  }
 }
 
 // ── AUTH ──
@@ -366,7 +373,7 @@ async function generateChallenge(v){const h=await crypto.subtle.digest('SHA-256'
 async function startLogin(){localStorage.setItem('ewr_wt',walletType);const v=generateVerifier(),c=await generateChallenge(v);sessionStorage.setItem('pkce_v',v);location.href=SSO_AUTH+'?'+new URLSearchParams({response_type:'code',redirect_uri:CB,client_id:CLIENT_ID,scope:SCOPES,state:'ewr',code_challenge:c,code_challenge_method:'S256'});}
 async function handleCallback(){const code=new URLSearchParams(location.search).get('code');if(!code)return false;history.replaceState({},'',location.pathname);walletType=localStorage.getItem('ewr_wt')||'personal';showLoading('Authenticating...');try{const r=await fetch(SSO_TOKEN,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'authorization_code',code,redirect_uri:CB,client_id:CLIENT_ID,code_verifier:sessionStorage.getItem('pkce_v')})});const t=await r.json();if(!r.ok)throw new Error(t.error_description||'Auth failed');localStorage.setItem(TOKEN_KEY,JSON.stringify(t));return true;}catch(e){showToast(e.message,'error');hideLoading();return false;}}
 function addCharacter(){localStorage.setItem('ewr_adding','1');localStorage.setItem('ewr_wt',walletType);startLogin();}
-function logout(){localStorage.removeItem(TOKEN_KEY);localStorage.removeItem(CHARS_KEY);for(let i=0;i<10;i++)localStorage.removeItem(DATA_PFX+i);registeredChars=[];charDataCache={};document.getElementById('login-screen').classList.add('visible');document.getElementById('dashboard').style.display='none';setStatus(false);}
+function logout(){localStorage.removeItem(TOKEN_KEY);localStorage.removeItem(CHARS_KEY);for(let i=0;i<10;i++){localStorage.removeItem(DATA_PFX+i);localStorage.removeItem('ewr_tok_'+i);}registeredChars=[];charDataCache={};document.getElementById('login-screen').classList.add('visible');document.getElementById('dashboard').style.display='none';setStatus(false);}
 
 // ── ESI ──
 async function esiFetch(url,token){const r=await fetch(url,{headers:{Authorization:`Bearer ${token}`}});if(!r.ok)throw new Error(`${r.status}`);return r.json();}
@@ -508,25 +515,56 @@ async function renderAssets(){
   if(activeAssetChar!=='all')rows=rows.filter(a=>a.charName===activeAssetChar);
   if(fl)rows=rows.filter(a=>String(a.location_id)===fl);
 
-  // 이름 조회
+  // 토큰 가져오기 (구조물 이름 조회용)
+  const tokenData=JSON.parse(localStorage.getItem(TOKEN_KEY)||'null');
+  const token=tokenData?.access_token;
+
   const typeIds=rows.map(a=>a.type_id);
   const locIds=[...new Set(rows.map(a=>a.location_id))];
   showLoading('Resolving names...');
   await resolveTypeNames(typeIds);
-  await resolveLocationNames(locIds);
+  await resolveLocationNames(locIds,token);
   hideLoading();
 
-  if(s)rows=rows.filter(a=>(nameCache.types[a.type_id]||'').toLowerCase().includes(s)||(a.type_id+'').includes(s));
+  if(s)rows=rows.filter(a=>(nameCache.types[a.type_id]||'').toLowerCase().includes(s));
 
   // 그룹핑
   const grouped={};
   rows.forEach(a=>{const k=`${a.type_id}_${a.location_id}_${a.charName}`;if(!grouped[k])grouped[k]={...a,quantity:0,totalValue:0};grouped[k].quantity+=a.quantity;grouped[k].totalValue+=a.priceEach*a.quantity;});
-  const sorted=Object.values(grouped).sort((a,b)=>b.totalValue-a.totalValue);
+
+  // 정렬
+  function sortAssets(arr){
+    return arr.sort((a,b)=>{
+      let va,vb;
+      if(assetSortCol==='item'){va=nameCache.types[a.type_id]||'';vb=nameCache.types[b.type_id]||'';}
+      else if(assetSortCol==='location'){va=nameCache.locations[a.location_id]||'';vb=nameCache.locations[b.location_id]||'';}
+      else if(assetSortCol==='flag'){va=a.location_flag||'';vb=b.location_flag||'';}
+      else if(assetSortCol==='quantity'){va=a.quantity;vb=b.quantity;}
+      else{va=a.totalValue;vb=b.totalValue;}
+      if(typeof va==='string')return assetSortDir==='asc'?va.localeCompare(vb):vb.localeCompare(va);
+      return assetSortDir==='asc'?va-vb:vb-va;
+    });
+  }
+  const sorted=sortAssets(Object.values(grouped));
+
+  function thSort(col,label){
+    const active=assetSortCol===col;
+    const arrow=active?(assetSortDir==='asc'?'↑':'↓'):'';
+    const style=active?'color:var(--accent);cursor:pointer;':'cursor:pointer;color:var(--text3);';
+    return`<th style="${style}user-select:none;" onclick="setAssetSort('${col}')">${label} ${arrow}</th>`;
+  }
 
   if(assetView==='list'){
     const ta=document.getElementById('table-assets');
     if(!sorted.length){ta.innerHTML='<tbody><tr><td colspan="6" class="empty">NO DATA</td></tr></tbody>';return;}
-    ta.innerHTML=`<thead><tr><th>Character</th><th>Item</th><th>Location</th><th>Flag</th><th style="text-align:right">Qty</th><th style="text-align:right">Est. Value</th></tr></thead><tbody>${sorted.slice(0,500).map(a=>`<tr>
+    ta.innerHTML=`<thead><tr>
+      <th style="color:var(--text3)">Character</th>
+      ${thSort('item','Item')}
+      ${thSort('location','Location')}
+      ${thSort('flag','Flag')}
+      ${thSort('quantity','Qty')}
+      ${thSort('totalValue','Est. Value')}
+    </tr></thead><tbody>${sorted.slice(0,500).map(a=>`<tr>
       <td style="font-size:12px;color:var(--text2)">${a.charName}</td>
       <td style="font-size:12px">${nameCache.types[a.type_id]||`Type ${a.type_id}`}</td>
       <td style="font-size:11px;color:var(--text3);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nameCache.locations[a.location_id]||`Location ${a.location_id}`}</td>
@@ -567,17 +605,33 @@ async function renderAssets(){
   document.getElementById('asset-loc-filter').innerHTML='<option value="">All Locations</option>'+allLocs.slice(0,100).map(l=>`<option value="${l}">${nameCache.locations[parseInt(l)]||l}</option>`).join('');
 }
 
+// ── ASSET SORT ──
+function setAssetSort(col){
+  if(assetSortCol===col)assetSortDir=assetSortDir==='asc'?'desc':'asc';
+  else{assetSortCol=col;assetSortDir=col==='totalValue'||col==='quantity'?'desc':'asc';}
+  renderAssets();
+}
+
 // ── ORDERS & CONTRACTS ──
-function renderOrders(){
+async function renderOrders(){
   let allO=[];registeredChars.forEach((c,i)=>{const d=charDataCache[i];if(d?.orders)d.orders.forEach(o=>allO.push({...o,charName:c.charName}));});
   if(activeOrdersChar!=='all')allO=allO.filter(o=>o.charName===activeOrdersChar);
+
+  // 아이템명 + 로케이션명 조회
+  if(allO.length){
+    const tokenData=JSON.parse(localStorage.getItem(TOKEN_KEY)||'null');
+    const token=tokenData?.access_token;
+    await resolveTypeNames([...new Set(allO.map(o=>o.type_id))]);
+    await resolveLocationNames([...new Set(allO.map(o=>o.location_id))],token);
+  }
+
   const to=document.getElementById('table-orders');
   if(!allO.length){to.innerHTML='<tbody><tr><td colspan="7" class="empty">NO DATA</td></tr></tbody>';}
-  else to.innerHTML=`<thead><tr><th>Character</th><th>Type ID</th><th>B/S</th><th>Location</th><th style="text-align:right">Price</th><th style="text-align:right">Remain</th><th style="text-align:right">Total Value</th></tr></thead><tbody>${allO.map(o=>`<tr>
+  else to.innerHTML=`<thead><tr><th>Character</th><th>Item</th><th>B/S</th><th>Location</th><th style="text-align:right">Price</th><th style="text-align:right">Remain</th><th style="text-align:right">Total Value</th></tr></thead><tbody>${allO.map(o=>`<tr>
     <td style="font-size:12px;color:var(--text2)">${o.charName}</td>
-    <td style="font-family:'Share Tech Mono',monospace;font-size:11px">${nameCache.types[o.type_id]||o.type_id}</td>
+    <td style="font-size:12px">${nameCache.types[o.type_id]||`Type ${o.type_id}`}</td>
     <td><span class="tag ${o.is_buy_order?'buy':'sell'}">${o.is_buy_order?'BUY':'SELL'}</span></td>
-    <td style="font-size:11px;color:var(--text3)">${nameCache.locations[o.location_id]||o.location_id}</td>
+    <td style="font-size:11px;color:var(--text3);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nameCache.locations[o.location_id]||`Location ${o.location_id}`}</td>
     <td class="num">${fmtISK(o.price)} ISK</td>
     <td class="num">${fmtNum(o.volume_remain)}</td>
     <td class="num" style="color:var(--accent)">${fmtISK(o.price*o.volume_remain)} ISK</td>
@@ -697,7 +751,7 @@ function switchPage(p){
   document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',pages[i]===p));
   if(p==='assets')renderAssets();
   if(p==='journal')renderJournal();
-  if(p==='orders')renderOrders();
+  if(p==='orders')renderOrders().catch(console.error);
   if(p==='lp')renderLP();
 }
 
@@ -725,12 +779,17 @@ async function init(){
   const existingIdx=registeredChars.findIndex(c=>c.charId===charInfo.CharacterID);
   if(isAdding){if(existingIdx>=0)registeredChars[existingIdx]=charEntry;else registeredChars.push(charEntry);}
   else{if(registeredChars.length===0)registeredChars.push(charEntry);else if(existingIdx>=0)registeredChars[existingIdx]=charEntry;else registeredChars[0]=charEntry;}
+  // 현재 로그인한 캐릭 토큰을 인덱스별로 개별 저장
+  const myIdx=registeredChars.findIndex(c=>c.charId===charInfo.CharacterID);
+  if(myIdx>=0)localStorage.setItem('ewr_tok_'+myIdx,JSON.stringify(tokenData));
   localStorage.setItem(CHARS_KEY,JSON.stringify(registeredChars));
   for(let i=0;i<registeredChars.length;i++){
     const c=registeredChars[i];
-    const t=c.token?.access_token||tokenData.access_token;
+    // 개별 저장 토큰 우선 → charEntry.token → 현재 tokenData 순
+    const savedTok=JSON.parse(localStorage.getItem('ewr_tok_'+i)||'null');
+    const t=(savedTok||c.token||tokenData)?.access_token||tokenData.access_token;
     try{charDataCache[i]=await loadCharData(i,t);}
-    catch(e){console.error(e);charDataCache[i]={walletBalance:0,assetValue:0,totalLP:0,totalSP:0,orderValue:0,contractValue:0,journal:JSON.parse(localStorage.getItem(DATA_PFX+i)||'[]'),priceMap:{},loyaltyPoints:[],lpCorpNames:{},assets:[],orders:[],contracts:[]};}
+    catch(e){console.error('Char',i,'load error:',e.message);charDataCache[i]={walletBalance:0,assetValue:0,totalLP:0,totalSP:0,orderValue:0,contractValue:0,journal:JSON.parse(localStorage.getItem(DATA_PFX+i)||'[]'),priceMap:{},loyaltyPoints:[],lpCorpNames:{},assets:[],orders:[],contracts:[]};}
   }
   document.getElementById('login-screen').classList.remove('visible');
   document.getElementById('dashboard').style.display='block';
