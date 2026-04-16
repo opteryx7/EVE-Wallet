@@ -311,6 +311,10 @@ const SCOPES=['esi-wallet.read_character_wallet.v1','esi-wallet.read_corporation
 let walletType='personal',registeredChars=[],charDataCache={},currentPeriod=7,charts={};
 let activeAssetChar='all',activeJournalChar='all',activeOrdersChar='all',activeLPChar='all';
 let assetView='list';
+// nameCache - localStorage에 영구 저장
+const NAME_CACHE_KEY='ewr_namecache';
+function loadNameCache(){try{const c=JSON.parse(localStorage.getItem(NAME_CACHE_KEY)||'{}');nameCache.types=c.types||{};nameCache.locations=c.locations||{};}catch(e){}}
+function saveNameCache(){try{localStorage.setItem(NAME_CACHE_KEY,JSON.stringify(nameCache));}catch(e){}}
 let nameCache={types:{},locations:{}};
 let assetSortCol='totalValue',assetSortDir='desc';
 
@@ -339,6 +343,7 @@ async function resolveTypeNames(typeIds){
       data.forEach(d=>{nameCache.types[d.id]=d.name;});
     }
   }catch(e){}
+  saveNameCache();
 }
 
 async function resolveLocationNames(locIds,token){
@@ -353,7 +358,7 @@ async function resolveLocationNames(locIds,token){
   // 구조물 (id >= 1e12) - 병렬 처리 + 타임아웃
   const structIds=needed.filter(id=>id>=1e12);
   if(!structIds.length)return;
-  if(!token){structIds.forEach(id=>{nameCache.locations[id]=`Structure ${id}`;});return;}
+  if(!token){structIds.forEach(id=>{nameCache.locations[id]=`Structure ${id}`;});saveNameCache();return;}
   const fetchWithTimeout=async(url,opts,ms=5000)=>{
     const ctrl=new AbortController();
     const tid=setTimeout(()=>ctrl.abort(),ms);
@@ -370,6 +375,7 @@ async function resolveLocationNames(locIds,token){
       else nameCache.locations[sid]=`Structure ${sid}`;
     }));
   }
+  saveNameCache();
 }
 
 // ── AUTH ──
@@ -405,6 +411,16 @@ async function loadCharData(idx,token){
       if(r.ok){const names=await r.json();const nm={};names.forEach(n=>nm[n.id]=n.name);d.lpCorpNames=nm;}
     }catch(e){d.lpCorpNames={};}
   }
+
+  // 자산/오더 이름 미리 조회 (탭 열 때 빠르게)
+  try{
+    showLoading('Pre-loading names...');
+    const allTypeIds=[...(d.assets||[]).map(a=>a.type_id),...(d.orders||[]).map(o=>o.type_id)];
+    const allLocIds=[...(d.assets||[]).map(a=>a.location_id),...(d.orders||[]).map(o=>o.location_id)];
+    await resolveTypeNames([...new Set(allTypeIds)]);
+    await resolveLocationNames([...new Set(allLocIds)],token);
+  }catch(e){}
+
   return d;
 }
 
@@ -521,16 +537,21 @@ async function renderAssets(){
   if(activeAssetChar!=='all')rows=rows.filter(a=>a.charName===activeAssetChar);
   if(fl)rows=rows.filter(a=>String(a.location_id)===fl);
 
-  // 토큰 가져오기 (구조물 이름 조회용)
+  // 토큰 (혹시 캐시 미스된 항목 보완용)
   const tokenData=JSON.parse(localStorage.getItem(TOKEN_KEY)||'null');
   const token=tokenData?.access_token;
 
   const typeIds=rows.map(a=>a.type_id);
   const locIds=[...new Set(rows.map(a=>a.location_id))];
-  showLoading('Resolving names...');
-  await resolveTypeNames(typeIds);
-  await resolveLocationNames(locIds,token);
-  hideLoading();
+  // 캐시 미스 항목만 추가 조회 (대부분 이미 로드됨)
+  const missingTypes=typeIds.filter(id=>!nameCache.types[id]);
+  const missingLocs=locIds.filter(id=>!nameCache.locations[id]);
+  if(missingTypes.length||missingLocs.length){
+    showLoading('Resolving names...');
+    if(missingTypes.length)await resolveTypeNames(missingTypes);
+    if(missingLocs.length)await resolveLocationNames(missingLocs,token);
+    hideLoading();
+  }
 
   if(s)rows=rows.filter(a=>(nameCache.types[a.type_id]||'').toLowerCase().includes(s));
 
@@ -767,6 +788,7 @@ function renderAll(){renderCharList();recalcTotal();renderOverviewCharts();}
 
 // ── INIT ──
 async function init(){
+  loadNameCache();
   document.getElementById('login-screen').classList.add('visible');
   const code=new URLSearchParams(location.search).get('code');
   if(code){const ok=await handleCallback();if(!ok){hideLoading();return;}}
