@@ -212,7 +212,7 @@ main{max-width:1440px;margin:0 auto;padding:1.5rem 2rem;}
           <label class="ti"><input type="checkbox" id="tog-orders" checked onchange="recalcTotal()"> Orders</label>
           <label class="ti"><input type="checkbox" id="tog-contracts" checked onchange="recalcTotal()"> Contracts</label>
           <label class="ti"><input type="checkbox" id="tog-lp" checked onchange="recalcTotal()"> LP Value</label>
-          <label class="ti"><input type="checkbox" id="tog-sp" checked onchange="recalcTotal()"> SP Value</label>
+          <label class="ti"><input type="checkbox" id="tog-sp" checked onchange="recalcTotal()"> SP Value <span id="sp-basis-text" style="color:var(--text3);font-size:9px;margin-left:4px;">(loading...)</span></label>
         </div>
       </div>
     </div>
@@ -326,7 +326,36 @@ function hideLoading(){document.getElementById('loading').style.display='none';}
 function showToast(m,t=''){const el=document.getElementById('toast');el.textContent=m;el.className='show '+t;setTimeout(()=>el.className='',3500);}
 function setStatus(on){const d=document.getElementById('status-dot');d.style.background=on?'var(--accent3)':'var(--text3)';d.style.boxShadow=on?'0 0 6px var(--accent3)':'none';document.getElementById('status-text').textContent=on?'ONLINE':'OFFLINE';}
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
-function getSpValue(sp){return(sp/500000)*350e6;}
+const SP_MIN=5000000; // 5M SP 이하 추출 불가
+const TYPE_LARGE_INJECTOR=40520;
+const TYPE_EXTRACTOR=40519;
+let spPriceCache={injector:0,extractor:0,loaded:false};
+
+async function loadSpPrices(){
+  if(spPriceCache.loaded)return;
+  try{
+    const r=await fetch(`${ESI}/markets/prices/`);
+    if(!r.ok)return;
+    const prices=await r.json();
+    prices.forEach(p=>{
+      if(p.type_id===TYPE_LARGE_INJECTOR)spPriceCache.injector=p.adjusted_price||p.average_price||0;
+      if(p.type_id===TYPE_EXTRACTOR)spPriceCache.extractor=p.adjusted_price||p.average_price||0;
+    });
+    spPriceCache.loaded=true;
+    const net=spPriceCache.injector-spPriceCache.extractor;
+    const el=document.getElementById('sp-basis-text');
+    if(el&&net>0)el.textContent=`(${fmtISK(net)}/500k SP)`;
+  }catch(e){}
+}
+
+function getSpValue(sp){
+  if(!sp||sp<=SP_MIN)return 0;
+  const extractableSP=sp-SP_MIN;
+  const injectors=extractableSP/500000;
+  const netPerInjector=spPriceCache.injector-spPriceCache.extractor;
+  if(netPerInjector<=0)return injectors*350e6; // 시장가 없으면 350M 기본값
+  return injectors*netPerInjector;
+}
 
 function refTag(ref){const m={bounty_prizes:['bounty','BOUNTY'],agent_mission_reward:['mission','MISSION'],agent_mission_time_bonus_reward:['bonus','BONUS'],market_transaction:['market','MARKET'],contract_price:['contract','CONTRACT'],contract_reward:['contract','CONTRACT'],player_donation:['other','DONATION'],daily_goal_payouts:['other','DAILY']};const[c,l]=m[ref]||['other',ref?(ref.replace(/_/g,' ').slice(0,14).toUpperCase()):'?'];return`<span class="tag ${c}">${l}</span>`;}
 
@@ -473,7 +502,7 @@ function renderCharBreakdown(){
         <div class="cr"><span class="crl">Orders (sell)</span><span class="crv">${fmtISK(o)} ISK</span></div>
         <div class="cr"><span class="crl">Contracts</span><span class="crv">${fmtISK(ct)} ISK</span></div>
         <div class="cr"><span class="crl">LP (${fmtNum(d.totalLP)} pts)</span><span class="crv gold">${fmtISK(lp)} ISK</span></div>
-        <div class="cr"><span class="crl">SP (${fmtNum(d.totalSP)})</span><span class="crv gold">${fmtISK(sp)} ISK</span></div>
+        <div class="cr"><span class="crl">SP (${fmtNum(d.totalSP)})</span><span class="crv gold">${d.totalSP<=SP_MIN?'Not extractable':fmtISK(sp)+' ISK'}</span></div>
       </div>
     </div>`;
   }).join('');
@@ -789,6 +818,7 @@ function renderAll(){renderCharList();recalcTotal();renderOverviewCharts();}
 // ── INIT ──
 async function init(){
   loadNameCache();
+  loadSpPrices(); // SP 시장가 미리 로드 (백그라운드)
   document.getElementById('login-screen').classList.add('visible');
   const code=new URLSearchParams(location.search).get('code');
   if(code){const ok=await handleCallback();if(!ok){hideLoading();return;}}
