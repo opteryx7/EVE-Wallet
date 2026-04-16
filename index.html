@@ -1,672 +1,143 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EVE Wallet Lens</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
+<title>EVE Wallet Review</title>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=Exo+2:wght@200;300;400;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
-  :root {
-    --bg: #040d14;
-    --bg2: #071624;
-    --bg3: #0a1e30;
-    --border: #0e3a5a;
-    --border2: #1a5c8a;
-    --accent: #00d4ff;
-    --accent2: #0099cc;
-    --accent3: #00ff99;
-    --text: #c8e8f8;
-    --text2: #6a9ab8;
-    --text3: #3a6a88;
-    --danger: #ff4466;
-    --warn: #ffaa00;
-    --gold: #f0c040;
-    --panel: rgba(7,22,36,0.95);
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Exo 2', sans-serif;
-    font-weight: 300;
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background:
-      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0,180,255,0.08) 0%, transparent 70%),
-      radial-gradient(ellipse 40% 30% at 80% 80%, rgba(0,80,140,0.06) 0%, transparent 60%);
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  .scanline {
-    position: fixed;
-    inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0,0,0,0.03) 2px,
-      rgba(0,0,0,0.03) 4px
-    );
-    pointer-events: none;
-    z-index: 1;
-  }
-
-  #app { position: relative; z-index: 2; }
-
-  /* ── HEADER ── */
-  header {
-    border-bottom: 1px solid var(--border);
-    padding: 0 2rem;
-    height: 64px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: rgba(4,13,20,0.9);
-    backdrop-filter: blur(12px);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-
-  .logo {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .logo-icon {
-    width: 32px;
-    height: 32px;
-    position: relative;
-  }
-
-  .logo-icon svg { width: 100%; height: 100%; }
-
-  .logo-text {
-    font-family: 'Rajdhani', sans-serif;
-    font-weight: 700;
-    font-size: 22px;
-    letter-spacing: 3px;
-    color: var(--accent);
-    text-transform: uppercase;
-  }
-
-  .logo-sub {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 9px;
-    color: var(--text3);
-    letter-spacing: 2px;
-    margin-top: -4px;
-  }
-
-  .header-status {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 11px;
-    color: var(--text3);
-  }
-
-  .status-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--text3);
-    transition: all 0.3s;
-  }
-
-  .status-dot.online { background: var(--accent3); box-shadow: 0 0 6px var(--accent3); }
-
-  /* ── MAIN ── */
-  main { max-width: 1400px; margin: 0 auto; padding: 2rem; }
-
-  /* ── LOGIN SCREEN ── */
-  #login-screen {
-    min-height: calc(100vh - 64px);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 2rem;
-    text-align: center;
-  }
-  #login-screen.visible { display: flex; }
-
-  .login-card {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 3rem;
-    max-width: 480px;
-    width: 100%;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .login-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  }
-
-  .login-title {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 28px;
-    font-weight: 600;
-    color: var(--accent);
-    letter-spacing: 2px;
-    margin-bottom: 0.5rem;
-  }
-
-  .login-desc {
-    color: var(--text2);
-    font-size: 14px;
-    line-height: 1.6;
-    margin-bottom: 2rem;
-  }
-
-  .wallet-type-selector {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 1.5rem;
-  }
-
-  .wallet-type-btn {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 1rem;
-    cursor: pointer;
-    transition: all 0.2s;
-    color: var(--text2);
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: 1px;
-    text-align: center;
-  }
-
-  .wallet-type-btn:hover, .wallet-type-btn.active {
-    border-color: var(--accent);
-    color: var(--accent);
-    background: rgba(0,212,255,0.05);
-  }
-
-  .wallet-type-icon { font-size: 24px; display: block; margin-bottom: 6px; }
-
-  .btn-primary {
-    width: 100%;
-    background: transparent;
-    border: 1px solid var(--accent);
-    color: var(--accent);
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 16px;
-    font-weight: 600;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-    padding: 14px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .btn-primary::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: var(--accent);
-    opacity: 0;
-    transition: opacity 0.2s;
-  }
-
-  .btn-primary:hover::before { opacity: 0.08; }
-  .btn-primary:active { transform: scale(0.99); }
-
-  .btn-primary:disabled {
-    border-color: var(--border2);
-    color: var(--text3);
-    cursor: not-allowed;
-  }
-
-  .client-id-input {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    color: var(--text);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 13px;
-    padding: 10px 14px;
-    width: 100%;
-    margin-bottom: 12px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-
-  .client-id-input:focus { border-color: var(--accent2); }
-  .client-id-input::placeholder { color: var(--text3); }
-
-  .input-label {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 10px;
-    color: var(--text3);
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    margin-bottom: 6px;
-    display: block;
-    text-align: left;
-  }
-
-  /* ── DASHBOARD ── */
-  #dashboard { display: none; }
-
-  .dash-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1.5rem;
-    flex-wrap: wrap;
-    gap: 1rem;
-  }
-
-  .char-info {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .char-avatar {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    border: 1px solid var(--border2);
-    background: var(--bg3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'Rajdhani', sans-serif;
-    font-weight: 700;
-    font-size: 16px;
-    color: var(--accent);
-    overflow: hidden;
-  }
-
-  .char-avatar img { width: 100%; height: 100%; object-fit: cover; }
-
-  .char-name {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--text);
-  }
-
-  .char-corp {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 10px;
-    color: var(--text3);
-    letter-spacing: 1px;
-  }
-
-  .dash-actions {
-    display: flex;
-    gap: 8px;
-  }
-
-  .btn-sm {
-    background: transparent;
-    border: 1px solid var(--border2);
-    color: var(--text2);
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 1px;
-    padding: 8px 16px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .btn-sm:hover { border-color: var(--accent); color: var(--accent); }
-  .btn-sm.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.06); }
-
-  /* ── STAT CARDS ── */
-  .stat-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 12px;
-    margin-bottom: 1.5rem;
-  }
-
-  .stat-card {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 1.25rem;
-    position: relative;
-    overflow: hidden;
-    transition: border-color 0.2s;
-  }
-
-  .stat-card::after {
-    content: '';
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--accent2), transparent);
-    opacity: 0.4;
-  }
-
-  .stat-card:hover { border-color: var(--border2); }
-
-  .stat-label {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 9px;
-    letter-spacing: 2px;
-    color: var(--text3);
-    text-transform: uppercase;
-    margin-bottom: 8px;
-  }
-
-  .stat-value {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 26px;
-    font-weight: 600;
-    color: var(--accent);
-    line-height: 1;
-  }
-
-  .stat-unit {
-    font-size: 12px;
-    color: var(--text3);
-    margin-left: 4px;
-  }
-
-  .stat-sub {
-    font-size: 11px;
-    color: var(--text2);
-    margin-top: 4px;
-    font-family: 'Share Tech Mono', monospace;
-  }
-
-  /* ── PANELS ── */
-  .panel-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 16px;
-  }
-
-  @media (max-width: 900px) { .panel-grid { grid-template-columns: 1fr; } }
-
-  .panel {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    overflow: hidden;
-  }
-
-  .panel-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1rem 1.25rem;
-    border-bottom: 1px solid var(--border);
-    background: rgba(0,0,0,0.2);
-  }
-
-  .panel-title {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 2px;
-    color: var(--text2);
-    text-transform: uppercase;
-  }
-
-  .panel-body { padding: 1.25rem; }
-
-  .chart-wrap { position: relative; width: 100%; height: 260px; }
-
-  /* ── TABLE ── */
-  .data-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-  }
-
-  .data-table th {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 9px;
-    letter-spacing: 2px;
-    color: var(--text3);
-    text-transform: uppercase;
-    padding: 10px 12px;
-    text-align: left;
-    border-bottom: 1px solid var(--border);
-    white-space: nowrap;
-  }
-
-  .data-table td {
-    padding: 10px 12px;
-    border-bottom: 1px solid rgba(14,58,90,0.4);
-    color: var(--text);
-    vertical-align: middle;
-  }
-
-  .data-table tr:last-child td { border-bottom: none; }
-  .data-table tr:hover td { background: rgba(0,212,255,0.03); }
-
-  .data-table td.num {
-    font-family: 'Share Tech Mono', monospace;
-    text-align: right;
-    color: var(--accent);
-    font-size: 12px;
-  }
-
-  .data-table td.rank {
-    font-family: 'Share Tech Mono', monospace;
-    color: var(--text3);
-    font-size: 11px;
-  }
-
-  .bar-cell { min-width: 80px; }
-
-  .mini-bar {
-    height: 4px;
-    background: var(--bg3);
-    border-radius: 2px;
-    overflow: hidden;
-    margin-top: 6px;
-  }
-
-  .mini-bar-fill {
-    height: 100%;
-    border-radius: 2px;
-    background: linear-gradient(90deg, var(--accent2), var(--accent));
-  }
-
-  /* ── TABS ── */
-  .tab-bar {
-    display: flex;
-    gap: 4px;
-    padding: 0 1.25rem;
-    border-bottom: 1px solid var(--border);
-    background: rgba(0,0,0,0.2);
-  }
-
-  .tab {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 1px;
-    color: var(--text3);
-    padding: 12px 16px;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    transition: all 0.2s;
-    background: none;
-    border-top: none;
-    border-left: none;
-    border-right: none;
-  }
-
-  .tab:hover { color: var(--text2); }
-  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-
-  /* ── TAG ── */
-  .tag {
-    display: inline-block;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 9px;
-    letter-spacing: 1px;
-    padding: 2px 8px;
-    border-radius: 2px;
-    border: 1px solid var(--border2);
-    color: var(--text3);
-    text-transform: uppercase;
-  }
-
-  .tag.bounty { border-color: #1a5c8a; color: #5ba8d8; }
-  .tag.mission { border-color: #1a5a2a; color: #5bc87a; }
-  .tag.bonus { border-color: #5a4a0a; color: #c8a840; }
-  .tag.other { border-color: #3a1a3a; color: #a870a8; }
-
-  /* ── LOADING ── */
-  #loading {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(4,13,20,0.9);
-    z-index: 200;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .loader-ring {
-    width: 48px;
-    height: 48px;
-    border: 2px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  .loader-text {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 12px;
-    color: var(--text2);
-    letter-spacing: 2px;
-  }
-
-  /* ── TOAST ── */
-  #toast {
-    position: fixed;
-    bottom: 2rem;
-    right: 2rem;
-    background: var(--bg2);
-    border: 1px solid var(--border2);
-    border-radius: 4px;
-    padding: 12px 20px;
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 12px;
-    color: var(--text);
-    z-index: 300;
-    transform: translateY(100px);
-    opacity: 0;
-    transition: all 0.3s;
-  }
-
-  #toast.show { transform: translateY(0); opacity: 1; }
-  #toast.error { border-color: var(--danger); color: var(--danger); }
-  #toast.success { border-color: var(--accent3); color: var(--accent3); }
-
-  /* ── PERIOD FILTER ── */
-  .period-bar {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-  }
-
-  .period-btn {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 1px;
-    color: var(--text3);
-    background: none;
-    border: 1px solid var(--border);
-    border-radius: 3px;
-    padding: 4px 10px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .period-btn:hover, .period-btn.active {
-    border-color: var(--accent2);
-    color: var(--accent);
-  }
-
-  /* ── FULL TABLE PANEL ── */
-  .full-panel {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    margin-bottom: 16px;
-    overflow: hidden;
-  }
-
-  .table-scroll { overflow-x: auto; max-height: 500px; overflow-y: auto; }
-
-  .table-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
-  .table-scroll::-webkit-scrollbar-track { background: var(--bg); }
-  .table-scroll::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
-
-  .divider {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 9px;
-    letter-spacing: 2px;
-    color: var(--text3);
-    text-transform: uppercase;
-    margin: 1.5rem 0 1rem;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .divider::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border);
-  }
-
-  .empty {
-    text-align: center;
-    padding: 3rem;
-    color: var(--text3);
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 12px;
-    letter-spacing: 2px;
-  }
+:root {
+  --bg:#040d14;--bg2:#071624;--bg3:#0a1e30;
+  --border:#0e3a5a;--border2:#1a5c8a;
+  --accent:#00d4ff;--accent2:#0099cc;--accent3:#00ff99;
+  --text:#c8e8f8;--text2:#6a9ab8;--text3:#3a6a88;
+  --danger:#ff4466;--warn:#ffaa00;--gold:#f0c040;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Exo 2',sans-serif;font-weight:300;min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(0,180,255,0.08) 0%,transparent 70%);pointer-events:none;z-index:0;}
+.scanline{position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);pointer-events:none;z-index:1;}
+#app{position:relative;z-index:2;}
+
+header{border-bottom:1px solid var(--border);padding:0 2rem;height:60px;display:flex;align-items:center;justify-content:space-between;background:rgba(4,13,20,0.95);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100;}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-icon{width:28px;height:28px;}
+.logo-text{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:20px;letter-spacing:2px;color:var(--accent);}
+.logo-sub{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--text3);letter-spacing:2px;margin-top:-3px;}
+
+main{max-width:1440px;margin:0 auto;padding:1.5rem 2rem;}
+
+.nav-tabs{display:flex;gap:4px;margin-bottom:1.5rem;border-bottom:1px solid var(--border);}
+.nav-tab{font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;letter-spacing:1px;color:var(--text3);padding:10px 18px;cursor:pointer;border-bottom:2px solid transparent;background:none;border-top:none;border-left:none;border-right:none;transition:all 0.2s;}
+.nav-tab:hover{color:var(--text2);}
+.nav-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+#login-screen{min-height:calc(100vh - 60px);display:none;align-items:center;justify-content:center;flex-direction:column;}
+#login-screen.visible{display:flex;}
+.login-card{background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:2.5rem;max-width:460px;width:100%;position:relative;overflow:hidden;}
+.login-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);}
+.login-title{font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:700;color:var(--accent);letter-spacing:3px;margin-bottom:0.5rem;}
+.login-desc{color:var(--text2);font-size:13px;line-height:1.6;margin-bottom:1.5rem;}
+.wallet-type-selector{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.25rem;}
+.wallet-type-btn{background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:0.875rem;cursor:pointer;transition:all 0.2s;color:var(--text2);font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;letter-spacing:1px;text-align:center;}
+.wallet-type-btn:hover,.wallet-type-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,0.05);}
+.wallet-type-icon{font-size:22px;display:block;margin-bottom:4px;}
+.btn-primary{width:100%;background:transparent;border:1px solid var(--accent);color:var(--accent);font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:600;letter-spacing:3px;text-transform:uppercase;padding:13px;border-radius:4px;cursor:pointer;transition:all 0.2s;}
+.btn-primary:hover{background:rgba(0,212,255,0.06);}
+
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:4px;overflow:hidden;margin-bottom:16px;}
+.panel-header{display:flex;align-items:center;justify-content:space-between;padding:0.875rem 1.25rem;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.2);}
+.panel-title{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;letter-spacing:2px;color:var(--text2);text-transform:uppercase;}
+
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:1.25rem;}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:1rem 1.125rem;position:relative;overflow:hidden;}
+.stat-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent2),transparent);opacity:0.3;}
+.stat-label{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--text3);text-transform:uppercase;margin-bottom:6px;}
+.stat-value{font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:600;color:var(--accent);line-height:1;}
+.stat-unit{font-size:11px;color:var(--text3);margin-left:3px;}
+.stat-sub{font-size:11px;color:var(--text2);margin-top:3px;font-family:'Share Tech Mono',monospace;}
+
+.hero{background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:2rem;margin-bottom:1.25rem;position:relative;overflow:hidden;text-align:center;}
+.hero::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);}
+.hero-label{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:3px;color:var(--text3);text-transform:uppercase;margin-bottom:10px;}
+.hero-value{font-family:'Rajdhani',sans-serif;font-size:48px;font-weight:700;color:var(--accent);line-height:1;}
+.hero-unit{font-size:20px;color:var(--text2);margin-left:6px;}
+.hero-sub{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text2);margin-top:8px;}
+
+.toggle-bar{display:flex;gap:16px;flex-wrap:wrap;align-items:center;}
+.toggle-item{display:flex;align-items:center;gap:6px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text2);letter-spacing:1px;}
+.toggle-item input{accent-color:var(--accent);width:14px;height:14px;}
+
+.char-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-bottom:1.25rem;}
+.char-card{background:var(--bg2);border:1px solid var(--border);border-radius:4px;overflow:hidden;}
+.char-card:hover{border-color:var(--border2);}
+.char-card-header{display:flex;align-items:center;gap:10px;padding:0.875rem 1rem;background:rgba(0,0,0,0.2);border-bottom:1px solid var(--border);}
+.char-portrait{width:36px;height:36px;border-radius:50%;border:1px solid var(--border2);object-fit:cover;background:var(--bg3);}
+.char-card-name{font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:600;color:var(--text);}
+.char-card-type{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:1px;}
+.char-card-body{padding:0.875rem 1rem;}
+.char-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(14,58,90,0.3);font-size:13px;}
+.char-row:last-child{border-bottom:none;}
+.char-row-label{color:var(--text3);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;}
+.char-row-val{color:var(--accent);font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;}
+.char-row-val.green{color:var(--accent3);}
+.char-row-val.gold{color:var(--gold);}
+.char-row-val.red{color:var(--danger);}
+
+.btn-sm{background:transparent;border:1px solid var(--border2);color:var(--text2);font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;letter-spacing:1px;padding:6px 14px;border-radius:4px;cursor:pointer;transition:all 0.2s;}
+.btn-sm:hover{border-color:var(--accent);color:var(--accent);}
+.btn-sm.green{border-color:var(--accent3);color:var(--accent3);}
+
+.data-table{width:100%;border-collapse:collapse;font-size:13px;}
+.data-table th{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--text3);text-transform:uppercase;padding:9px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;}
+.data-table td{padding:9px 12px;border-bottom:1px solid rgba(14,58,90,0.3);color:var(--text);vertical-align:middle;}
+.data-table tr:last-child td{border-bottom:none;}
+.data-table tr:hover td{background:rgba(0,212,255,0.02);}
+.data-table td.num{font-family:'Share Tech Mono',monospace;text-align:right;font-size:12px;}
+.table-scroll{overflow-x:auto;max-height:480px;overflow-y:auto;}
+.table-scroll::-webkit-scrollbar{width:4px;height:4px;}
+.table-scroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+
+.tag{display:inline-block;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;padding:2px 7px;border-radius:2px;border:1px solid var(--border2);color:var(--text3);text-transform:uppercase;}
+.tag.bounty{border-color:#1a5c8a;color:#5ba8d8;}
+.tag.mission{border-color:#1a5a2a;color:#5bc87a;}
+.tag.bonus{border-color:#5a4a0a;color:#c8a840;}
+.tag.market{border-color:#4a2a5a;color:#c870d8;}
+.tag.contract{border-color:#3a5a2a;color:#88c870;}
+.tag.buy{border-color:#1a5c8a;color:#5ba8d8;}
+.tag.sell{border-color:#1a5a2a;color:#5bc87a;}
+.tag.other{border-color:#3a3a3a;color:#888;}
+
+.chart-wrap{position:relative;width:100%;height:260px;}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:900px){.chart-grid{grid-template-columns:1fr;}}
+
+.period-bar{display:flex;gap:4px;}
+.period-btn{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text3);background:none;border:1px solid var(--border);border-radius:3px;padding:4px 10px;cursor:pointer;transition:all 0.2s;}
+.period-btn.active,.period-btn:hover{border-color:var(--accent2);color:var(--accent);}
+
+#loading{display:none;position:fixed;inset:0;background:rgba(4,13,20,0.92);z-index:200;align-items:center;justify-content:center;flex-direction:column;gap:12px;}
+.loader-ring{width:44px;height:44px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loader-text{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text2);letter-spacing:2px;}
+
+#toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:10px 18px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text);z-index:300;transform:translateY(80px);opacity:0;transition:all 0.3s;}
+#toast.show{transform:translateY(0);opacity:1;}
+#toast.error{border-color:var(--danger);color:var(--danger);}
+#toast.success{border-color:var(--accent3);color:var(--accent3);}
+
+.empty{text-align:center;padding:2.5rem;color:var(--text3);font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:2px;}
+.divider{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--text3);text-transform:uppercase;margin:1.25rem 0 0.75rem;display:flex;align-items:center;gap:10px;}
+.divider::after{content:'';flex:1;height:1px;background:var(--border);}
+
+.search-row{display:flex;gap:8px;padding:10px 1.25rem;border-bottom:1px solid var(--border);flex-wrap:wrap;align-items:center;}
+.sinput{background:var(--bg);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:12px;padding:7px 12px;outline:none;transition:border-color 0.2s;}
+.sinput:focus{border-color:var(--accent2);}
+.sinput::placeholder{color:var(--text3);}
+
+.lp-row{display:flex;align-items:center;gap:8px;justify-content:center;margin-top:8px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text2);}
+.lp-row input{background:var(--bg);border:1px solid var(--border);color:var(--accent);font-family:'Share Tech Mono',monospace;font-size:12px;padding:4px 10px;border-radius:3px;width:90px;outline:none;text-align:right;}
 </style>
 </head>
 <body>
@@ -675,685 +146,622 @@
 
 <header>
   <div class="logo">
-    <div class="logo-icon">
-      <svg viewBox="0 0 32 32" fill="none">
-        <polygon points="16,2 30,26 2,26" fill="none" stroke="#00d4ff" stroke-width="1.5"/>
-        <polygon points="16,8 26,24 6,24" fill="rgba(0,212,255,0.06)" stroke="#0099cc" stroke-width="0.5"/>
-        <circle cx="16" cy="18" r="3" fill="#00d4ff" opacity="0.8"/>
-      </svg>
-    </div>
+    <svg class="logo-icon" viewBox="0 0 28 28" fill="none">
+      <rect x="2" y="6" width="24" height="16" rx="2" fill="none" stroke="#00d4ff" stroke-width="1.5"/>
+      <rect x="2" y="6" width="24" height="6" rx="2" fill="rgba(0,212,255,0.08)" stroke="#00d4ff" stroke-width="1.5"/>
+      <circle cx="7" cy="9" r="1.5" fill="#00d4ff"/>
+      <circle cx="11" cy="9" r="1.5" fill="#0099cc"/>
+      <rect x="5" y="16" width="8" height="3" rx="1" fill="rgba(0,212,255,0.15)" stroke="#0099cc" stroke-width="0.8"/>
+      <rect x="15" y="16" width="5" height="3" rx="1" fill="rgba(0,255,153,0.15)" stroke="#00ff99" stroke-width="0.8"/>
+      <line x1="2" y1="12" x2="26" y2="12" stroke="#0e3a5a" stroke-width="1"/>
+    </svg>
     <div>
-      <div class="logo-text">Wallet Lens</div>
-      <div class="logo-sub">EVE Online · ISK Tracker</div>
+      <div class="logo-text">EVE WALLET REVIEW</div>
+      <div class="logo-sub">ISK · ASSETS · PERFORMANCE</div>
     </div>
   </div>
-  <div class="header-status">
-    <div class="status-dot" id="status-dot"></div>
-    <span id="status-text">OFFLINE</span>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <div style="width:6px;height:6px;border-radius:50%;background:var(--text3);" id="status-dot"></div>
+    <span id="status-text" style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text3);">OFFLINE</span>
   </div>
 </header>
 
-<!-- 로딩 -->
-<div id="loading">
-  <div class="loader-ring"></div>
-  <div class="loader-text" id="loading-text">CONNECTING...</div>
-</div>
-
-<!-- 토스트 -->
+<div id="loading"><div class="loader-ring"></div><div class="loader-text" id="loading-text">LOADING...</div></div>
 <div id="toast"></div>
 
-<main id="app-main">
+<main>
 
-  <!-- 로그인 화면 -->
-  <div id="login-screen">
-    <div class="login-card">
-      <div class="login-title">EVE WALLET LENS</div>
-      <div class="login-desc">Sign in with EVE SSO to analyze your wallet data.<br>All data is processed in your browser only.</div>
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-title">EVE WALLET REVIEW</div>
+    <div class="login-desc">Sign in with EVE SSO to analyze your wallet, assets, and performance.<br>All data is processed locally in your browser.</div>
+    <div class="wallet-type-selector">
+      <div class="wallet-type-btn active" id="btn-personal" onclick="selectWalletType('personal')"><span class="wallet-type-icon">👤</span>Personal</div>
+      <div class="wallet-type-btn" id="btn-corp" onclick="selectWalletType('corp')"><span class="wallet-type-icon">🏢</span>Corp</div>
+    </div>
+    <button class="btn-primary" onclick="startLogin()">LOGIN WITH EVE SSO</button>
+    <div style="margin-top:0.875rem;font-size:11px;color:var(--text3);line-height:1.6;">Corp wallet requires Accountant role.</div>
+  </div>
+</div>
 
-      <div class="wallet-type-selector">
-        <div class="wallet-type-btn active" id="btn-personal" onclick="selectWalletType('personal')">
-          <span class="wallet-type-icon">👤</span>
-          Personal Wallet
-        </div>
-        <div class="wallet-type-btn" id="btn-corp" onclick="selectWalletType('corp')">
-          <span class="wallet-type-icon">🏢</span>
-          Corp Wallet
-        </div>
-      </div>
+<!-- DASHBOARD -->
+<div id="dashboard" style="display:none;">
 
-      <button class="btn-primary" id="login-btn" onclick="startLogin()">
-        LOGIN WITH EVE SSO
-      </button>
-
-      <div style="margin-top: 1rem; font-size: 11px; color: var(--text3); line-height: 1.6;">
-        Corp wallet requires Accountant role.
-      </div>
+  <!-- 캐릭터 + 액션 바 -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px;">
+    <div id="char-list" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;"></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn-sm green" onclick="addCharacter()">+ Add Character</button>
+      <button class="btn-sm" onclick="exportCSV()">Export CSV</button>
+      <button class="btn-sm" onclick="logout()">Logout</button>
     </div>
   </div>
 
-  <!-- 대시보드 -->
-  <div id="dashboard">
-    <div class="dash-header">
-      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-        <div class="char-info" id="char-list" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
-        <button class="btn-sm" onclick="addCharacter()" style="border-color: var(--accent3); color: var(--accent3);">+ Add Character</button>
-      </div>
-      <div class="dash-actions">
-        <div class="period-bar">
-          <button class="period-btn active" onclick="setPeriod(7)">7D</button>
-          <button class="period-btn" onclick="setPeriod(14)">14D</button>
-          <button class="period-btn" onclick="setPeriod(30)">30D</button>
-          <button class="period-btn" onclick="setPeriod(0)">ALL</button>
+  <!-- NAV -->
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchPage('overview')">Overview</button>
+    <button class="nav-tab" onclick="switchPage('assets')">Assets</button>
+    <button class="nav-tab" onclick="switchPage('journal')">Journal</button>
+    <button class="nav-tab" onclick="switchPage('orders')">Orders & Contracts</button>
+  </div>
+
+  <!-- ── OVERVIEW ── -->
+  <div id="page-overview">
+    <div class="hero">
+      <div class="hero-label">Total Portfolio Value</div>
+      <div><span class="hero-value" id="hero-total">—</span><span class="hero-unit">ISK</span></div>
+      <div class="hero-sub" id="hero-sub">Calculating...</div>
+      <div style="margin-top:1rem;">
+        <div class="toggle-bar" style="justify-content:center;">
+          <label class="toggle-item"><input type="checkbox" id="tog-wallet" checked onchange="recalcTotal()"> Wallet</label>
+          <label class="toggle-item"><input type="checkbox" id="tog-assets" checked onchange="recalcTotal()"> Assets</label>
+          <label class="toggle-item"><input type="checkbox" id="tog-orders" checked onchange="recalcTotal()"> Orders</label>
+          <label class="toggle-item"><input type="checkbox" id="tog-contracts" checked onchange="recalcTotal()"> Contracts</label>
+          <label class="toggle-item"><input type="checkbox" id="tog-lp" checked onchange="recalcTotal()"> LP Value</label>
+          <label class="toggle-item"><input type="checkbox" id="tog-sp" checked onchange="recalcTotal()"> SP Value</label>
         </div>
-        <button class="btn-sm" onclick="exportCSV()">Export CSV</button>
-        <button class="btn-sm" onclick="logout()">Logout</button>
+        <div class="lp-row">
+          <span>ISK/LP:</span><input type="number" id="lp-rate" value="1500" onchange="recalcTotal()">
+          <span style="color:var(--text3);margin-left:8px;">SP basis: Extractor 350M / 500k SP</span>
+        </div>
       </div>
     </div>
 
-    <!-- 요약 카드 -->
+    <div class="divider">Character Breakdown</div>
+    <div class="char-grid" id="char-breakdown"></div>
+
+    <div id="corp-div-section" style="display:none;">
+      <div class="divider">Corp Wallet Divisions</div>
+      <div class="panel"><div class="table-scroll"><table class="data-table" id="corp-div-table"></table></div></div>
+    </div>
+
+    <div class="divider">Income & Expense</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem;">
+      <div class="period-bar">
+        <button class="period-btn active" onclick="setPeriod(7)">7D</button>
+        <button class="period-btn" onclick="setPeriod(14)">14D</button>
+        <button class="period-btn" onclick="setPeriod(30)">30D</button>
+      </div>
+    </div>
     <div class="stat-grid" id="stat-grid"></div>
-
-    <!-- 탭 -->
-    <div class="full-panel">
-      <div class="tab-bar">
-        <button class="tab active" onclick="switchTab('overview')">Overview</button>
-        <button class="tab" onclick="switchTab('chars')">By Character</button>
-        <button class="tab" onclick="switchTab('journal')">Journal</button>
-      </div>
-
-      <!-- 개요 탭 -->
-      <div id="tab-overview">
-        <div style="padding: 1.25rem;">
-          <div class="panel-grid">
-            <div>
-              <div class="panel-title" style="margin-bottom: 12px;">Income by Type</div>
-              <div class="chart-wrap"><canvas id="chart-type" role="img" aria-label="Income by type chart"></canvas></div>
-            </div>
-            <div>
-              <div class="panel-title" style="margin-bottom: 12px;">Daily Income</div>
-              <div class="chart-wrap"><canvas id="chart-trend" role="img" aria-label="Daily income chart"></canvas></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 캐릭터별 탭 -->
-      <div id="tab-chars" style="display:none;">
-        <div style="padding: 1.25rem 1.25rem 0;">
-          <div class="chart-wrap" style="height: 220px; margin-bottom: 1rem;">
-            <canvas id="chart-chars" role="img" aria-label="ISK income by character chart"></canvas>
-          </div>
-        </div>
-        <div class="table-scroll">
-          <table class="data-table" id="table-chars"></table>
-        </div>
-      </div>
-
-      <!-- 전체 내역 탭 -->
-      <div id="tab-journal" style="display:none;">
-        <div style="padding: 12px 1.25rem; border-bottom: 1px solid var(--border); display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-          <input class="client-id-input" id="journal-search" style="margin:0; width: 220px; padding: 7px 12px;" placeholder="Search by character or type...">
-          <select id="journal-filter" class="client-id-input" style="margin:0; width: 180px; padding: 7px 12px;">
-            <option value="">All Types</option>
-          </select>
-        </div>
-        <div class="table-scroll">
-          <table class="data-table" id="table-journal"></table>
-        </div>
-      </div>
+    <div class="chart-grid" style="margin-bottom:16px;">
+      <div class="panel"><div class="panel-header"><span class="panel-title">Income by Type</span></div><div style="padding:1rem;"><div class="chart-wrap"><canvas id="chart-type" role="img" aria-label="Income by type"></canvas></div></div></div>
+      <div class="panel"><div class="panel-header"><span class="panel-title">Daily Income vs Expense</span></div><div style="padding:1rem;"><div class="chart-wrap"><canvas id="chart-trend" role="img" aria-label="Daily income"></canvas></div></div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">Character P&amp;L</span></div>
+      <div style="padding:1rem;"><div class="chart-wrap" style="height:180px;"><canvas id="chart-chars" role="img" aria-label="Char PnL"></canvas></div></div>
+      <div class="table-scroll"><table class="data-table" id="table-chars"></table></div>
     </div>
   </div>
 
+  <!-- ── ASSETS ── -->
+  <div id="page-assets" style="display:none;">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Asset Inventory</span>
+        <div style="display:flex;gap:8px;">
+          <select class="sinput" id="asset-char-filter" style="width:150px;" onchange="renderAssets()"><option value="">All Characters</option></select>
+          <select class="sinput" id="asset-loc-filter" style="width:190px;" onchange="renderAssets()"><option value="">All Locations</option></select>
+        </div>
+      </div>
+      <div class="search-row">
+        <input class="sinput" id="asset-search" placeholder="Search by type ID..." style="width:220px;" oninput="renderAssets()">
+      </div>
+      <div class="table-scroll"><table class="data-table" id="table-assets"></table></div>
+    </div>
+  </div>
+
+  <!-- ── JOURNAL ── -->
+  <div id="page-journal" style="display:none;">
+    <div class="panel">
+      <div class="panel-header"><span class="panel-title">Wallet Journal</span></div>
+      <div class="search-row">
+        <input class="sinput" id="journal-search" placeholder="Search..." style="width:200px;" oninput="renderJournal()">
+        <select class="sinput" id="journal-type-filter" style="width:180px;" onchange="renderJournal()"><option value="">All Types</option></select>
+        <select class="sinput" id="journal-char-filter" style="width:150px;" onchange="renderJournal()"><option value="">All Characters</option></select>
+      </div>
+      <div class="table-scroll"><table class="data-table" id="table-journal"></table></div>
+    </div>
+  </div>
+
+  <!-- ── ORDERS & CONTRACTS ── -->
+  <div id="page-orders" style="display:none;">
+    <div class="divider">Market Orders</div>
+    <div class="panel"><div class="panel-header"><span class="panel-title">Active Orders</span></div><div class="table-scroll"><table class="data-table" id="table-orders"></table></div></div>
+    <div class="divider">Contracts</div>
+    <div class="panel"><div class="panel-header"><span class="panel-title">Contracts</span></div><div class="table-scroll"><table class="data-table" id="table-contracts"></table></div></div>
+  </div>
+
+</div>
 </main>
 </div>
 
 <script>
-const CLIENT_ID = 'cdadeb67014b4a908d2508028b922448';
-const TOKEN_STORAGE = 'eve_wallet_token';
-const DATA_STORAGE = 'eve_wallet_data';
-const CHARS_STORAGE = 'eve_wallet_chars';
-const ESI = 'https://esi.evetech.net/latest';
-const SSO_AUTH = 'https://login.eveonline.com/v2/oauth/authorize';
-const SSO_TOKEN = 'https://login.eveonline.com/v2/oauth/token';
-const SSO_VERIFY = 'https://login.eveonline.com/oauth/verify';
-const CALLBACK = location.origin + location.pathname;
+const CLIENT_ID='cdadeb67014b4a908d2508028b922448';
+const TOKEN_KEY='ewr_token';
+const CHARS_KEY='ewr_chars';
+const DATA_PFX='ewr_journal_';
+const ESI='https://esi.evetech.net/latest';
+const SSO_AUTH='https://login.eveonline.com/v2/oauth/authorize';
+const SSO_TOKEN='https://login.eveonline.com/v2/oauth/token';
+const SSO_VERIFY='https://login.eveonline.com/oauth/verify';
+const CB=location.origin+location.pathname;
+const SCOPES=[
+  'esi-wallet.read_character_wallet.v1',
+  'esi-wallet.read_corporation_wallets.v1',
+  'esi-assets.read_assets.v1',
+  'esi-assets.read_corporation_assets.v1',
+  'esi-characters.read_loyalty.v1',
+  'esi-skills.read_skills.v1',
+  'esi-markets.read_character_orders.v1',
+  'esi-markets.read_corporation_orders.v1',
+  'esi-contracts.read_character_contracts.v1',
+  'esi-contracts.read_corporation_contracts.v1',
+].join(' ');
 
-let walletType = 'personal';
-let allEntries = [];
-let charInfo = null;
-let corpId = null;
-let currentPeriod = 7;
-let charts = {};
-let registeredChars = [];
-let activeCharIdx = 0;
+let walletType='personal', registeredChars=[], charDataCache={}, currentPeriod=7, charts={};
 
-function saveChars() {
-  localStorage.setItem(CHARS_STORAGE, JSON.stringify(registeredChars));
+// ── UTILS ──
+function fmtISK(v){
+  if(v===null||v===undefined)return'—';
+  const a=Math.abs(v),s=v<0?'-':'';
+  if(a>=1e12)return s+(a/1e12).toFixed(2)+'T';
+  if(a>=1e9)return s+(a/1e9).toFixed(2)+'B';
+  if(a>=1e6)return s+(a/1e6).toFixed(2)+'M';
+  if(a>=1e3)return s+(a/1e3).toFixed(1)+'K';
+  return s+Math.round(a).toLocaleString();
+}
+function fmtNum(v){return v?Math.round(v).toLocaleString():'0';}
+function showLoading(m){document.getElementById('loading').style.display='flex';document.getElementById('loading-text').textContent=m||'LOADING...';}
+function hideLoading(){document.getElementById('loading').style.display='none';}
+function showToast(m,t=''){const el=document.getElementById('toast');el.textContent=m;el.className='show '+t;setTimeout(()=>el.className='',3500);}
+function setStatus(on){document.getElementById('status-dot').style.cssText=on?'width:6px;height:6px;border-radius:50%;background:var(--accent3);box-shadow:0 0 6px var(--accent3);':'width:6px;height:6px;border-radius:50%;background:var(--text3);';document.getElementById('status-text').textContent=on?'ONLINE':'OFFLINE';}
+function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+function getLpRate(){return parseFloat(document.getElementById('lp-rate').value)||1500;}
+function getSpValue(sp){return(sp/500000)*350e6;}
+
+function refTag(ref){
+  const m={bounty_prizes:['bounty','BOUNTY'],agent_mission_reward:['mission','MISSION'],agent_mission_time_bonus_reward:['bonus','BONUS'],market_transaction:['market','MARKET'],contract_price:['contract','CONTRACT'],contract_reward:['contract','CONTRACT'],player_donation:['other','DONATION'],daily_goal_payouts:['other','DAILY']};
+  const[c,l]=m[ref]||['other',ref?(ref.replace(/_/g,' ').slice(0,12).toUpperCase()):'?'];
+  return`<span class="tag ${c}">${l}</span>`;
 }
 
-function loadChars() {
-  return JSON.parse(localStorage.getItem(CHARS_STORAGE) || '[]');
+// ── AUTH ──
+function selectWalletType(t){walletType=t;document.getElementById('btn-personal').classList.toggle('active',t==='personal');document.getElementById('btn-corp').classList.toggle('active',t==='corp');}
+function generateVerifier(){const a=new Uint8Array(32);crypto.getRandomValues(a);return btoa(String.fromCharCode(...a)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');}
+async function generateChallenge(v){const h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v));return btoa(String.fromCharCode(...new Uint8Array(h))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');}
+
+async function startLogin(){
+  localStorage.setItem('ewr_wtype',walletType);
+  const v=generateVerifier(),c=await generateChallenge(v);
+  sessionStorage.setItem('pkce_v',v);
+  location.href=SSO_AUTH+'?'+new URLSearchParams({response_type:'code',redirect_uri:CB,client_id:CLIENT_ID,scope:SCOPES,state:'ewr',code_challenge:c,code_challenge_method:'S256'});
 }
 
-function addCharacter() {
-  localStorage.setItem('eve_adding_char', '1');
-  localStorage.setItem('eve_wallet_type', walletType);
-  startLogin();
-}
-
-function renderCharList() {
-  const el = document.getElementById('char-list');
-  el.innerHTML = registeredChars.map((c, i) => `
-    <div style="display:flex; align-items:center; gap:6px; background:${i===activeCharIdx?'rgba(0,212,255,0.08)':'var(--bg3)'}; border:1px solid ${i===activeCharIdx?'var(--accent)':'var(--border)'}; border-radius:4px; padding:6px 10px; cursor:pointer;" onclick="switchChar(${i})">
-      <img src="https://images.evetech.net/characters/${c.charId}/portrait?size=32" style="width:24px;height:24px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'">
-      <span style="font-size:13px; color:${i===activeCharIdx?'var(--accent)':'var(--text2)'};">${c.charName}</span>
-      <span style="font-size:10px; color:var(--text3); font-family:'Share Tech Mono',monospace;">${c.walletType==='corp'?'CORP':'PERSONAL'}</span>
-      ${registeredChars.length > 1 ? `<span style="color:var(--text3); font-size:12px; cursor:pointer; margin-left:4px;" onclick="event.stopPropagation(); removeChar(${i})">×</span>` : ''}
-    </div>
-  `).join('');
-}
-
-function switchChar(idx) {
-  activeCharIdx = idx;
-  allEntries = JSON.parse(localStorage.getItem(DATA_STORAGE + '_' + idx) || '[]');
-  renderCharList();
-  renderDashboard();
-}
-
-function removeChar(idx) {
-  registeredChars.splice(idx, 1);
-  localStorage.removeItem(DATA_STORAGE + '_' + idx);
-  saveChars();
-  if (registeredChars.length === 0) { logout(); return; }
-  activeCharIdx = 0;
-  allEntries = JSON.parse(localStorage.getItem(DATA_STORAGE + '_0') || '[]');
-  renderCharList();
-  renderDashboard();
-}
-
-function selectWalletType(type) {
-  walletType = type;
-  document.getElementById('btn-personal').classList.toggle('active', type === 'personal');
-  document.getElementById('btn-corp').classList.toggle('active', type === 'corp');
-}
-
-function getScopes() {
-  return walletType === 'corp'
-    ? 'esi-wallet.read_corporation_wallets.v1'
-    : 'esi-wallet.read_character_wallet.v1';
-}
-
-async function startLogin() {
-  localStorage.setItem('eve_wallet_type', walletType);
-
-  const verifier = generateVerifier();
-  const challenge = await generateChallenge(verifier);
-  sessionStorage.setItem('pkce_verifier', verifier);
-
-  const params = new URLSearchParams({
-    response_type: 'code',
-    redirect_uri: CALLBACK,
-    client_id: CLIENT_ID,
-    scope: getScopes(),
-    state: 'evewallet',
-    code_challenge: challenge,
-    code_challenge_method: 'S256'
-  });
-
-  location.href = SSO_AUTH + '?' + params.toString();
-}
-
-function generateVerifier() {
-  const arr = new Uint8Array(32);
-  crypto.getRandomValues(arr);
-  return btoa(String.fromCharCode(...arr)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-}
-
-async function generateChallenge(verifier) {
-  const data = new TextEncoder().encode(verifier);
-  const hash = await crypto.subtle.digest('SHA-256', data);
-  return btoa(String.fromCharCode(...new Uint8Array(hash))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-}
-
-async function handleCallback() {
-  const params = new URLSearchParams(location.search);
-  const code = params.get('code');
-  if (!code) return false;
-
-  history.replaceState({}, '', location.pathname);
-
-  const clientId = CLIENT_ID;
-  const verifier = sessionStorage.getItem('pkce_verifier');
-  walletType = localStorage.getItem('eve_wallet_type') || 'personal';
-
-  showLoading('토큰 발급 중...');
-  try {
-    const res = await fetch(SSO_TOKEN, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        code,
-        redirect_uri: CALLBACK,
-        client_id: clientId,
-        code_verifier: verifier
-      })
-    });
-    const token = await res.json();
-    if (!res.ok) throw new Error(token.error_description || '토큰 발급 실패');
-    localStorage.setItem(TOKEN_STORAGE, JSON.stringify(token));
+async function handleCallback(){
+  const code=new URLSearchParams(location.search).get('code');
+  if(!code)return false;
+  history.replaceState({},'',location.pathname);
+  walletType=localStorage.getItem('ewr_wtype')||'personal';
+  showLoading('Authenticating...');
+  try{
+    const r=await fetch(SSO_TOKEN,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'authorization_code',code,redirect_uri:CB,client_id:CLIENT_ID,code_verifier:sessionStorage.getItem('pkce_v')})});
+    const t=await r.json();
+    if(!r.ok)throw new Error(t.error_description||'Auth failed');
+    localStorage.setItem(TOKEN_KEY,JSON.stringify(t));
     return true;
-  } catch(e) {
-    showToast(e.message, 'error');
-    hideLoading();
-    return false;
-  }
+  }catch(e){showToast(e.message,'error');hideLoading();return false;}
 }
 
-async function loadData(charIdx) {
-  const tokenData = JSON.parse(localStorage.getItem(TOKEN_STORAGE) || 'null');
-  if (!tokenData) return false;
+function addCharacter(){localStorage.setItem('ewr_adding','1');localStorage.setItem('ewr_wtype',walletType);startLogin();}
+function logout(){localStorage.removeItem(TOKEN_KEY);localStorage.removeItem(CHARS_KEY);for(let i=0;i<10;i++)localStorage.removeItem(DATA_PFX+i);registeredChars=[];charDataCache={};document.getElementById('login-screen').classList.add('visible');document.getElementById('dashboard').style.display='none';setStatus(false);}
 
-  const accessToken = tokenData.access_token;
-
-  showLoading('Fetching character info...');
-  try {
-    const verify = await fetch(SSO_VERIFY, { headers: { Authorization: `Bearer ${accessToken}` } });
-    charInfo = await verify.json();
-    if (!charInfo.CharacterID) throw new Error('Failed to fetch character info');
-  } catch(e) {
-    showToast('Session expired. Please login again.', 'error');
-    hideLoading();
-    return false;
-  }
-
-  const storageKey = DATA_STORAGE + '_' + charIdx;
-  const existing = JSON.parse(localStorage.getItem(storageKey) || '[]');
-  const existingIds = new Set(existing.map(e => e.id));
-  let newEntries = [];
-
-  if (walletType === 'corp') {
-    showLoading('Fetching corp info...');
-    const corpRes = await fetch(`${ESI}/characters/${charInfo.CharacterID}/`, { headers: { Authorization: `Bearer ${accessToken}` } });
-    const corpData = await corpRes.json();
-    corpId = corpData.corporation_id;
-
-    for (let div = 1; div <= 7; div++) {
-      showLoading(`Fetching corp wallet Division ${div}/7...`);
-      const entries = await fetchAllPages(`${ESI}/corporations/${corpId}/wallets/${div}/journal/`, accessToken);
-      entries.forEach(e => { e.division = div; e.wallet_type = 'corp'; });
-      newEntries.push(...entries);
-    }
-  } else {
-    showLoading('Fetching personal wallet...');
-    const entries = await fetchAllPages(`${ESI}/characters/${charInfo.CharacterID}/wallet/journal/`, accessToken);
-    entries.forEach(e => { e.wallet_type = 'personal'; });
-    newEntries.push(...entries);
-  }
-
-  let added = 0;
-  newEntries.forEach(e => {
-    if (!existingIds.has(e.id)) { existing.push(e); added++; }
-  });
-
-  localStorage.setItem(storageKey, JSON.stringify(existing));
-  allEntries = existing;
-  showToast(`${added} new entries added (total: ${existing.length})`, 'success');
-  return true;
-}
-
-async function fetchAllPages(url, token) {
-  const all = [];
-  let page = 1;
-  while (true) {
-    const res = await fetch(`${url}?page=${page}`, { headers: { Authorization: `Bearer ${token}` } });
-    if (!res.ok) break;
-    const data = await res.json();
-    if (!data.length) break;
-    all.push(...data);
-    const total = parseInt(res.headers.get('X-Pages') || '1');
-    if (page >= total) break;
+// ── ESI ──
+async function esiFetch(url,token){const r=await fetch(url,{headers:{Authorization:`Bearer ${token}`}});if(!r.ok)throw new Error(`${r.status}`);return r.json();}
+async function fetchPages(url,token){
+  const all=[];let page=1;
+  while(true){
+    const r=await fetch(`${url}${url.includes('?')?'&':'?'}page=${page}`,{headers:{Authorization:`Bearer ${token}`}});
+    if(!r.ok)break;
+    const d=await r.json();if(!d.length)break;
+    all.push(...d);
+    if(page>=parseInt(r.headers.get('X-Pages')||'1'))break;
     page++;
   }
   return all;
 }
 
-function filterByPeriod(entries, days) {
-  if (!days) return entries;
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - days);
-  return entries.filter(e => new Date(e.date) >= cutoff);
+// ── LOAD CHAR DATA ──
+async function loadCharData(idx,token){
+  const c=registeredChars[idx];
+  const cid=c.charId,wt=c.walletType,corpId=c.corpId;
+  const d={};
+
+  // 지갑
+  try{
+    if(wt==='corp'){showLoading('Loading corp wallet...');const divs=await esiFetch(`${ESI}/corporations/${corpId}/wallets/`,token);d.walletBalance=divs.reduce((s,x)=>s+x.balance,0);d.corpDivisions=divs;}
+    else{showLoading('Loading wallet...');d.walletBalance=await esiFetch(`${ESI}/characters/${cid}/wallet/`,token);}
+  }catch(e){d.walletBalance=0;}
+
+  // 자산
+  try{showLoading('Loading assets...');d.assets=wt==='corp'?await fetchPages(`${ESI}/corporations/${corpId}/assets/`,token):await fetchPages(`${ESI}/characters/${cid}/assets/`,token);}
+  catch(e){d.assets=[];}
+
+  // LP
+  try{showLoading('Loading LP...');const lp=await esiFetch(`${ESI}/characters/${cid}/loyalty/points/`,token);d.loyaltyPoints=lp;d.totalLP=lp.reduce((s,x)=>s+x.loyalty_points,0);}
+  catch(e){d.loyaltyPoints=[];d.totalLP=0;}
+
+  // SP
+  try{showLoading('Loading skills...');const sk=await esiFetch(`${ESI}/characters/${cid}/skills/`,token);d.totalSP=sk.total_sp||0;d.unallocSP=sk.unallocated_sp||0;}
+  catch(e){d.totalSP=0;d.unallocSP=0;}
+
+  // 오더
+  try{showLoading('Loading orders...');d.orders=wt==='corp'?await fetchPages(`${ESI}/corporations/${corpId}/orders/`,token):await fetchPages(`${ESI}/characters/${cid}/orders/`,token);d.orderValue=d.orders.filter(o=>!o.is_buy_order).reduce((s,o)=>s+o.price*o.volume_remain,0);}
+  catch(e){d.orders=[];d.orderValue=0;}
+
+  // 계약
+  try{showLoading('Loading contracts...');d.contracts=wt==='corp'?await fetchPages(`${ESI}/corporations/${corpId}/contracts/`,token):await fetchPages(`${ESI}/characters/${cid}/contracts/`,token);d.contractValue=d.contracts.filter(x=>x.type==='item_exchange'&&x.status==='outstanding').reduce((s,x)=>s+(x.price||0),0);}
+  catch(e){d.contracts=[];d.contractValue=0;}
+
+  // 저널
+  try{
+    showLoading('Loading journal...');
+    const sk=DATA_PFX+idx;
+    const existing=JSON.parse(localStorage.getItem(sk)||'[]');
+    const existingIds=new Set(existing.map(e=>e.id));
+    let fresh;
+    if(wt==='corp'){
+      fresh=[];
+      for(let div=1;div<=7;div++){const en=await fetchPages(`${ESI}/corporations/${corpId}/wallets/${div}/journal/`,token);en.forEach(e=>{e.division=div;e.charName=c.charName;e.charId=cid;});fresh.push(...en);}
+    }else{fresh=await fetchPages(`${ESI}/characters/${cid}/wallet/journal/`,token);fresh.forEach(e=>{e.charName=c.charName;e.charId=cid;});}
+    let added=0;fresh.forEach(e=>{if(!existingIds.has(e.id)){existing.push(e);added++;}});
+    localStorage.setItem(sk,JSON.stringify(existing));
+    d.journal=existing;d.journalAdded=added;
+  }catch(e){d.journal=JSON.parse(localStorage.getItem(DATA_PFX+idx)||'[]');d.journalAdded=0;}
+
+  // 마켓 가격
+  try{
+    showLoading('Loading market prices...');
+    const prices=await fetch(`${ESI}/markets/prices/`).then(r=>r.json());
+    const pm={};prices.forEach(p=>pm[p.type_id]=p.adjusted_price||p.average_price||0);
+    d.assetValue=(d.assets||[]).reduce((s,a)=>s+(pm[a.type_id]||0)*a.quantity,0);
+    d.priceMap=pm;
+  }catch(e){d.assetValue=0;d.priceMap={};}
+
+  return d;
 }
 
-function parseChar(desc, ref) {
-  if (!desc) return null;
-  if (ref === 'bounty_prizes' && desc.includes(' got bounty prizes')) return desc.split(' got bounty prizes')[0];
-  if (ref === 'agent_mission_reward' && desc.includes(' got reward from')) return desc.split(' got reward from')[0];
-  if (ref === 'agent_mission_time_bonus_reward' && desc.includes(' got time bonus reward from')) return desc.split(' got time bonus reward from')[0];
-  return null;
-}
-
-function fmtISK(v) {
-  if (v >= 1e9) return (v/1e9).toFixed(2) + 'B';
-  if (v >= 1e6) return (v/1e6).toFixed(2) + 'M';
-  if (v >= 1e3) return (v/1e3).toFixed(1) + 'K';
-  return Math.round(v).toLocaleString();
-}
-
-function refTag(ref) {
-  const map = {
-    bounty_prizes: ['bounty', 'BOUNTY'],
-    agent_mission_reward: ['mission', 'MISSION'],
-    agent_mission_time_bonus_reward: ['bonus', 'BONUS'],
-    daily_goal_payouts: ['other', 'DAILY GOAL'],
-    player_donation: ['other', 'DONATION'],
-    market_transaction: ['other', 'MARKET'],
-    industry_job_tax: ['other', 'INDUSTRY'],
-  };
-  const [cls, label] = map[ref] || ['other', ref.replace(/_/g, ' ').toUpperCase()];
-  return `<span class="tag ${cls}">${label}</span>`;
-}
-
-function renderDashboard() {
-  const filtered = filterByPeriod(allEntries, currentPeriod);
-
-  // 세금 집계
-  const taxEntries = filtered.filter(e => parseFloat(e.tax||0) > 0);
-  const totalTax = taxEntries.reduce((s,e) => s + parseFloat(e.tax||0), 0);
-  const totalAmount = filtered.reduce((s,e) => s + Math.abs(parseFloat(e.amount||0)), 0);
-
-  // 캐릭터별
-  const charTax = {};
-  taxEntries.forEach(e => {
-    const char = parseChar(e.description, e.ref_type) || (walletType === 'personal' ? charInfo.CharacterName : '기타');
-    charTax[char] = (charTax[char] || 0) + parseFloat(e.tax||0);
+// ── TOTAL CALC ──
+function recalcTotal(){
+  const tw=document.getElementById('tog-wallet').checked;
+  const ta=document.getElementById('tog-assets').checked;
+  const to=document.getElementById('tog-orders').checked;
+  const tc=document.getElementById('tog-contracts').checked;
+  const tl=document.getElementById('tog-lp').checked;
+  const ts=document.getElementById('tog-sp').checked;
+  const lpRate=getLpRate();
+  let total=0;
+  registeredChars.forEach((_,i)=>{
+    const d=charDataCache[i];if(!d)return;
+    if(tw)total+=d.walletBalance||0;
+    if(ta)total+=d.assetValue||0;
+    if(to)total+=d.orderValue||0;
+    if(tc)total+=d.contractValue||0;
+    if(tl)total+=(d.totalLP||0)*lpRate;
+    if(ts)total+=getSpValue(d.totalSP||0);
   });
-  const sortedChars = Object.entries(charTax).sort((a,b) => b[1]-a[1]);
+  document.getElementById('hero-total').textContent=fmtISK(total);
+  const parts=[];
+  if(tw)parts.push('Wallet');if(ta)parts.push('Assets');if(to)parts.push('Orders');if(tc)parts.push('Contracts');if(tl)parts.push(`LP×${lpRate}`);if(ts)parts.push('SP');
+  document.getElementById('hero-sub').textContent=`Includes: ${parts.join(' · ')} · ${registeredChars.length} char(s)`;
+  renderCharBreakdown();
+}
 
-  // 유형별
-  const typeTax = {};
-  taxEntries.forEach(e => {
-    const t = e.ref_type || '기타';
-    typeTax[t] = (typeTax[t] || 0) + parseFloat(e.tax||0);
-  });
-
-  // 날짜별
-  const dateTax = {};
-  taxEntries.forEach(e => {
-    const d = e.date.slice(0,10);
-    dateTax[d] = (dateTax[d] || 0) + parseFloat(e.tax||0);
-  });
-  const dates = Object.keys(dateTax).sort();
-
-  // stat cards
-  const sg = document.getElementById('stat-grid');
-  sg.innerHTML = `
-    <div class="stat-card">
-      <div class="stat-label">Total ISK Income</div>
-      <div class="stat-value">${fmtISK(totalTax)}<span class="stat-unit">ISK</span></div>
-      <div class="stat-sub">${taxEntries.length} entries</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Active Characters</div>
-      <div class="stat-value">${sortedChars.length}<span class="stat-unit"></span></div>
-      <div class="stat-sub">${walletType === 'corp' ? 'Corp Wallet' : 'Personal Wallet'}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Top Earner</div>
-      <div class="stat-value" style="font-size:16px; padding-top:5px;">${sortedChars[0]?.[0] || '—'}</div>
-      <div class="stat-sub">${sortedChars[0] ? fmtISK(sortedChars[0][1]) + ' ISK' : ''}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Period</div>
-      <div class="stat-value" style="font-size:16px; padding-top:5px;">${dates[0]||'—'}</div>
-      <div class="stat-sub">~ ${dates[dates.length-1]||'—'}</div>
-    </div>
-  `;
-
-  // 차트 - 유형별
-  const typeLabels = Object.keys(typeTax);
-  const typeVals = Object.values(typeTax).map(v => Math.round(v/1e6*100)/100);
-  const typeColors = ['#00d4ff','#00ff99','#ffaa00','#ff4488','#aa88ff','#44ccff','#88ffcc'];
-  destroyChart('chart-type');
-  charts['chart-type'] = new Chart(document.getElementById('chart-type'), {
-    type: 'doughnut',
-    data: {
-      labels: typeLabels.map(l => l.replace(/_/g,' ')),
-      datasets: [{ data: typeVals, backgroundColor: typeColors, borderWidth: 1, borderColor: '#071624' }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      cutout: '60%',
-      plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed.toFixed(2)}M ISK` } }
-      }
+// ── CHAR BREAKDOWN ──
+function renderCharBreakdown(){
+  const lpRate=getLpRate();
+  document.getElementById('char-breakdown').innerHTML=registeredChars.map((c,i)=>{
+    const d=charDataCache[i];
+    if(!d)return`<div class="char-card"><div class="char-card-header"><img class="char-portrait" src="https://images.evetech.net/characters/${c.charId}/portrait?size=64"><div><div class="char-card-name">${c.charName}</div><div class="char-card-type">Loading...</div></div></div></div>`;
+    const w=d.walletBalance||0,a=d.assetValue||0,o=d.orderValue||0,ct=d.contractValue||0;
+    const lp=(d.totalLP||0)*lpRate,sp=getSpValue(d.totalSP||0);
+    const net=w+a+o+ct+lp+sp;
+    let divRows='';
+    if(c.walletType==='corp'&&d.corpDivisions){
+      divRows=d.corpDivisions.map(dv=>`<div class="char-row"><span class="char-row-label">Division ${dv.division}</span><span class="char-row-val">${fmtISK(dv.balance)} ISK</span></div>`).join('');
     }
-  });
+    return`<div class="char-card">
+      <div class="char-card-header">
+        <img class="char-portrait" src="https://images.evetech.net/characters/${c.charId}/portrait?size=64" onerror="this.style.background='var(--bg3)'">
+        <div><div class="char-card-name">${c.charName}</div><div class="char-card-type">${c.walletType==='corp'?'CORP':'PERSONAL'} · ${fmtISK(net)} ISK total</div></div>
+      </div>
+      <div class="char-card-body">
+        <div class="char-row"><span class="char-row-label">Wallet Balance</span><span class="char-row-val green">${fmtISK(w)} ISK</span></div>
+        ${divRows}
+        <div class="char-row"><span class="char-row-label">Asset Value</span><span class="char-row-val">${fmtISK(a)} ISK</span></div>
+        <div class="char-row"><span class="char-row-label">Market Orders</span><span class="char-row-val">${fmtISK(o)} ISK</span></div>
+        <div class="char-row"><span class="char-row-label">Contracts</span><span class="char-row-val">${fmtISK(ct)} ISK</span></div>
+        <div class="char-row"><span class="char-row-label">LP (${fmtNum(d.totalLP)} pts)</span><span class="char-row-val gold">${fmtISK(lp)} ISK</span></div>
+        <div class="char-row"><span class="char-row-label">SP (${fmtNum(d.totalSP)})</span><span class="char-row-val gold">${fmtISK(sp)} ISK</span></div>
+      </div>
+    </div>`;
+  }).join('');
 
-  // 차트 - 일별 추이
-  destroyChart('chart-trend');
-  charts['chart-trend'] = new Chart(document.getElementById('chart-trend'), {
-    type: 'line',
-    data: {
-      labels: dates,
-      datasets: [{
-        label: 'Income (M ISK)',
-        data: dates.map(d => Math.round(dateTax[d]/1e4)/100),
-        borderColor: '#00d4ff',
-        backgroundColor: 'rgba(0,212,255,0.06)',
-        borderWidth: 2,
-        pointRadius: 3,
-        pointBackgroundColor: '#00d4ff',
-        fill: true,
-        tension: 0.3
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { ticks: { color: '#3a6a88', font: { size: 10 }, maxRotation: 45 }, grid: { color: 'rgba(14,58,90,0.3)' } },
-        y: { ticks: { color: '#3a6a88', font: { size: 10 }, callback: v => v+'M' }, grid: { color: 'rgba(14,58,90,0.3)' } }
-      }
-    }
-  });
-
-  // 캐릭터별 차트
-  const top10 = sortedChars.slice(0, 10);
-  const charColors = ['#00d4ff','#00ff99','#ffaa00','#ff4488','#aa88ff','#44ccff','#88ffcc','#ffcc44','#ff8844','#cc44ff'];
-  destroyChart('chart-chars');
-  charts['chart-chars'] = new Chart(document.getElementById('chart-chars'), {
-    type: 'bar',
-    data: {
-      labels: top10.map(([c]) => c),
-      datasets: [{
-        data: top10.map(([,v]) => Math.round(v/1e4)/100),
-        backgroundColor: charColors,
-        borderRadius: 2,
-      }]
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { ticks: { color: '#3a6a88', font: { size: 10 }, callback: v => v+'M' }, grid: { color: 'rgba(14,58,90,0.3)' } },
-        y: { ticks: { color: '#6a9ab8', font: { size: 11 } }, grid: { display: false } }
-      }
-    }
-  });
-
-  // 캐릭터 테이블
-  const maxTax = sortedChars[0]?.[1] || 1;
-  const tc = document.getElementById('table-chars');
-  tc.innerHTML = `<thead><tr>
-    <th>#</th><th>Character</th><th style="text-align:right">ISK Income</th><th style="text-align:right">Share</th><th>Bar</th>
-  </tr></thead><tbody>${sortedChars.map(([char, tax], i) => `
-    <tr>
-      <td class="rank">${i+1}</td>
-      <td>${char}</td>
-      <td class="num">${fmtISK(tax)} ISK</td>
-      <td class="num">${(tax/totalTax*100).toFixed(1)}%</td>
-      <td class="bar-cell"><div class="mini-bar"><div class="mini-bar-fill" style="width:${Math.round(tax/maxTax*100)}%"></div></div></td>
-    </tr>`).join('')}</tbody>`;
-
-  // 전체 내역 테이블 + 필터
-  renderJournal(filtered);
-
-  // 유형 필터 옵션
-  const sel = document.getElementById('journal-filter');
-  const types = [...new Set(filtered.map(e => e.ref_type).filter(Boolean))].sort();
-  sel.innerHTML = '<option value="">All Types</option>' + types.map(t => `<option value="${t}">${t.replace(/_/g,' ')}</option>`).join('');
-}
-
-function renderJournal(entries) {
-  const search = document.getElementById('journal-search').value.toLowerCase();
-  const filterType = document.getElementById('journal-filter').value;
-
-  let rows = [...entries].reverse();
-  if (search) rows = rows.filter(e => (e.description||'').toLowerCase().includes(search) || (e.ref_type||'').includes(search));
-  if (filterType) rows = rows.filter(e => e.ref_type === filterType);
-
-  const tj = document.getElementById('table-journal');
-  if (!rows.length) {
-    tj.innerHTML = '<tbody><tr><td colspan="6" class="empty">NO DATA</td></tr></tbody>';
-    return;
+  // 콥 디비전 섹션
+  const hasCorpDivs=registeredChars.some((c,i)=>c.walletType==='corp'&&charDataCache[i]?.corpDivisions);
+  document.getElementById('corp-div-section').style.display=hasCorpDivs?'':'none';
+  if(hasCorpDivs){
+    const rows=[];
+    registeredChars.forEach((c,i)=>{const d=charDataCache[i];if(c.walletType==='corp'&&d?.corpDivisions){d.corpDivisions.forEach(dv=>rows.push(`<tr><td style="color:var(--text2)">${c.charName}</td><td style="font-family:'Share Tech Mono',monospace;font-size:11px">Division ${dv.division}</td><td class="num" style="color:var(--accent3)">${fmtISK(dv.balance)} ISK</td></tr>`));}});
+    document.getElementById('corp-div-table').innerHTML=`<thead><tr><th>Character</th><th>Division</th><th style="text-align:right">Balance</th></tr></thead><tbody>${rows.join('')}</tbody>`;
   }
-  tj.innerHTML = `<thead><tr>
-    <th>Date</th><th>Type</th><th>Description</th><th style="text-align:right">Amount</th><th style="text-align:right">Tax</th><th style="text-align:right">Balance</th>
-  </tr></thead><tbody>${rows.slice(0,500).map(e => `
-    <tr>
-      <td style="font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--text3); white-space:nowrap">${e.date.slice(0,10)}</td>
+}
+
+// ── JOURNAL ──
+function getAllJournal(){
+  const all=[];
+  registeredChars.forEach((_,i)=>{const d=charDataCache[i];if(d?.journal)all.push(...d.journal);});
+  return all.sort((a,b)=>new Date(b.date)-new Date(a.date));
+}
+function filterByPeriod(entries,days){
+  if(!days)return entries;
+  const cutoff=new Date();cutoff.setDate(cutoff.getDate()-days);
+  return entries.filter(e=>new Date(e.date)>=cutoff);
+}
+function renderJournal(){
+  const s=document.getElementById('journal-search').value.toLowerCase();
+  const ft=document.getElementById('journal-type-filter').value;
+  const fc=document.getElementById('journal-char-filter').value;
+  let rows=getAllJournal();
+  if(s)rows=rows.filter(e=>(e.description||'').toLowerCase().includes(s)||(e.ref_type||'').includes(s));
+  if(ft)rows=rows.filter(e=>e.ref_type===ft);
+  if(fc)rows=rows.filter(e=>e.charName===fc);
+  const tj=document.getElementById('table-journal');
+  if(!rows.length){tj.innerHTML='<tbody><tr><td colspan="7" class="empty">NO DATA</td></tr></tbody>';return;}
+  tj.innerHTML=`<thead><tr><th>Date</th><th>Character</th><th>Type</th><th>Description</th><th style="text-align:right">Amount</th><th style="text-align:right">Tax</th><th style="text-align:right">Balance</th></tr></thead><tbody>${rows.slice(0,1000).map(e=>{
+    const amt=parseFloat(e.amount||0),tax=parseFloat(e.tax||0);
+    return`<tr>
+      <td style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text3);white-space:nowrap">${e.date.slice(0,10)}</td>
+      <td style="font-size:12px;color:var(--text2)">${e.charName||'—'}</td>
       <td>${refTag(e.ref_type)}</td>
-      <td style="color:var(--text2); max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px">${e.description||'—'}</td>
-      <td class="num" style="color:${parseFloat(e.amount||0)>=0?'var(--accent3)':'var(--danger)'}">${parseFloat(e.amount||0)>=0?'+':''}${fmtISK(Math.abs(parseFloat(e.amount||0)))}</td>
-      <td class="num" style="color:${parseFloat(e.tax||0)>0?'var(--gold)':'var(--text3)'}">${parseFloat(e.tax||0)>0?fmtISK(parseFloat(e.tax||0)):'-'}</td>
+      <td style="color:var(--text2);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">${e.description||'—'}</td>
+      <td class="num" style="color:${amt>=0?'var(--accent3)':'var(--danger)'}">${amt>=0?'+':''}${fmtISK(Math.abs(amt))}</td>
+      <td class="num" style="color:${tax>0?'var(--gold)':'var(--text3)'}">${tax>0?fmtISK(tax):'-'}</td>
       <td class="num" style="color:var(--text2)">${fmtISK(Math.abs(parseFloat(e.balance||0)))}</td>
-    </tr>`).join('')}
-  ${rows.length > 500 ? `<tr><td colspan="6" class="empty">Showing top 500 of ${rows.length} entries</td></tr>` : ''}
-  </tbody>`;
+    </tr>`;
+  }).join('')}${rows.length>1000?`<tr><td colspan="7" class="empty">Showing 1000 of ${rows.length}</td></tr>`:''}</tbody>`;
 }
 
-function switchTab(tab) {
-  ['overview','chars','journal'].forEach(t => {
-    document.getElementById(`tab-${t}`).style.display = t === tab ? '' : 'none';
-    document.querySelectorAll('.tab')[['overview','chars','journal'].indexOf(t)].classList.toggle('active', t === tab);
+// ── ASSETS ──
+function getAllAssets(){
+  const all=[];
+  registeredChars.forEach((c,i)=>{const d=charDataCache[i];if(d?.assets)d.assets.forEach(a=>all.push({...a,charName:c.charName,priceEach:d.priceMap?.[a.type_id]||0}));});
+  return all;
+}
+function renderAssets(){
+  const s=document.getElementById('asset-search').value.toLowerCase();
+  const fc=document.getElementById('asset-char-filter').value;
+  const fl=document.getElementById('asset-loc-filter').value;
+  let rows=getAllAssets();
+  if(fc)rows=rows.filter(a=>a.charName===fc);
+  if(fl)rows=rows.filter(a=>String(a.location_id)===fl);
+  if(s)rows=rows.filter(a=>(a.type_id+'').includes(s));
+  const grouped={};
+  rows.forEach(a=>{const k=`${a.type_id}_${a.location_id}_${a.charName}`;if(!grouped[k])grouped[k]={...a,quantity:0,totalValue:0};grouped[k].quantity+=a.quantity;grouped[k].totalValue+=a.priceEach*a.quantity;});
+  const sorted=Object.values(grouped).sort((a,b)=>b.totalValue-a.totalValue);
+  const ta=document.getElementById('table-assets');
+  if(!sorted.length){ta.innerHTML='<tbody><tr><td colspan="6" class="empty">NO DATA</td></tr></tbody>';return;}
+  ta.innerHTML=`<thead><tr><th>Character</th><th>Type ID</th><th>Location ID</th><th>Flag</th><th style="text-align:right">Qty</th><th style="text-align:right">Est. Value</th></tr></thead><tbody>${sorted.slice(0,500).map(a=>`<tr>
+    <td style="font-size:12px;color:var(--text2)">${a.charName}</td>
+    <td style="font-family:'Share Tech Mono',monospace;font-size:11px">${a.type_id}</td>
+    <td style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text3)">${a.location_id}</td>
+    <td style="font-size:11px;color:var(--text3)">${a.location_flag||'—'}</td>
+    <td class="num">${fmtNum(a.quantity)}</td>
+    <td class="num" style="color:var(--accent)">${a.totalValue>0?fmtISK(a.totalValue)+' ISK':'—'}</td>
+  </tr>`).join('')}${sorted.length>500?`<tr><td colspan="6" class="empty">Showing 500 of ${sorted.length}</td></tr>`:''}</tbody>`;
+}
+
+// ── ORDERS & CONTRACTS ──
+function renderOrders(){
+  const allO=[];registeredChars.forEach((c,i)=>{const d=charDataCache[i];if(d?.orders)d.orders.forEach(o=>allO.push({...o,charName:c.charName}));});
+  const to=document.getElementById('table-orders');
+  if(!allO.length){to.innerHTML='<tbody><tr><td colspan="7" class="empty">NO DATA</td></tr></tbody>';}
+  else to.innerHTML=`<thead><tr><th>Character</th><th>Type ID</th><th>B/S</th><th>Location</th><th style="text-align:right">Price</th><th style="text-align:right">Remain</th><th style="text-align:right">Total</th></tr></thead><tbody>${allO.map(o=>`<tr>
+    <td style="font-size:12px;color:var(--text2)">${o.charName}</td>
+    <td style="font-family:'Share Tech Mono',monospace;font-size:11px">${o.type_id}</td>
+    <td><span class="tag ${o.is_buy_order?'buy':'sell'}">${o.is_buy_order?'BUY':'SELL'}</span></td>
+    <td style="font-size:11px;color:var(--text3)">${o.location_id}</td>
+    <td class="num">${fmtISK(o.price)} ISK</td>
+    <td class="num">${fmtNum(o.volume_remain)}</td>
+    <td class="num" style="color:var(--accent)">${fmtISK(o.price*o.volume_remain)} ISK</td>
+  </tr>`).join('')}</tbody>`;
+
+  const allC=[];registeredChars.forEach((c,i)=>{const d=charDataCache[i];if(d?.contracts)d.contracts.forEach(ct=>allC.push({...ct,charName:c.charName}));});
+  const tc=document.getElementById('table-contracts');
+  if(!allC.length){tc.innerHTML='<tbody><tr><td colspan="6" class="empty">NO DATA</td></tr></tbody>';}
+  else tc.innerHTML=`<thead><tr><th>Character</th><th>Type</th><th>Status</th><th>Title</th><th style="text-align:right">Price</th><th>Expires</th></tr></thead><tbody>${allC.slice(0,300).map(c=>`<tr>
+    <td style="font-size:12px;color:var(--text2)">${c.charName}</td>
+    <td><span class="tag other">${(c.type||'').replace(/_/g,' ')}</span></td>
+    <td><span class="tag ${c.status==='outstanding'?'mission':c.status==='finished'?'bounty':'other'}">${c.status}</span></td>
+    <td style="font-size:12px;color:var(--text2);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.title||'—'}</td>
+    <td class="num">${c.price!=null?fmtISK(c.price)+' ISK':'—'}</td>
+    <td style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text3)">${c.date_expired?c.date_expired.slice(0,10):'—'}</td>
+  </tr>`).join('')}</tbody>`;
+}
+
+// ── CHARTS ──
+function renderOverviewCharts(){
+  const all=getAllJournal();
+  const filtered=filterByPeriod(all,currentPeriod);
+  const inc=filtered.filter(e=>parseFloat(e.amount||0)>0);
+  const exp=filtered.filter(e=>parseFloat(e.amount||0)<0);
+  const totalInc=inc.reduce((s,e)=>s+parseFloat(e.amount||0),0);
+  const totalExp=exp.reduce((s,e)=>s+parseFloat(e.amount||0),0);
+  const net=totalInc+totalExp;
+
+  document.getElementById('stat-grid').innerHTML=`
+    <div class="stat-card"><div class="stat-label">Total Income</div><div class="stat-value" style="color:var(--accent3)">${fmtISK(totalInc)}<span class="stat-unit">ISK</span></div><div class="stat-sub">${inc.length} entries</div></div>
+    <div class="stat-card"><div class="stat-label">Total Expense</div><div class="stat-value" style="color:var(--danger)">${fmtISK(Math.abs(totalExp))}<span class="stat-unit">ISK</span></div><div class="stat-sub">${exp.length} entries</div></div>
+    <div class="stat-card"><div class="stat-label">Net Profit</div><div class="stat-value" style="color:${net>=0?'var(--accent)':'var(--danger)'}">${net>=0?'+':''}${fmtISK(net)}<span class="stat-unit">ISK</span></div><div class="stat-sub">${currentPeriod}D</div></div>
+    <div class="stat-card"><div class="stat-label">Characters</div><div class="stat-value">${registeredChars.length}</div><div class="stat-sub">${registeredChars.map(c=>c.charName).join(', ').slice(0,40)}</div></div>`;
+
+  const typeMap={};inc.forEach(e=>{const t=e.ref_type||'other';typeMap[t]=(typeMap[t]||0)+parseFloat(e.amount||0);});
+  const tColors=['#00d4ff','#00ff99','#ffaa00','#ff4488','#aa88ff','#44ccff','#88ffcc','#ffcc44'];
+  destroyChart('chart-type');
+  charts['chart-type']=new Chart(document.getElementById('chart-type'),{type:'doughnut',data:{labels:Object.keys(typeMap).map(l=>l.replace(/_/g,' ')),datasets:[{data:Object.values(typeMap).map(v=>Math.round(v/1e6*100)/100),backgroundColor:tColors,borderWidth:1,borderColor:'#071624'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.parsed.toFixed(2)}M`}}}}});
+
+  const dates=[...new Set(filtered.map(e=>e.date.slice(0,10)))].sort();
+  const dInc={},dExp={};
+  filtered.forEach(e=>{const d=e.date.slice(0,10);const a=parseFloat(e.amount||0);if(a>0)dInc[d]=(dInc[d]||0)+a;else dExp[d]=(dExp[d]||0)+Math.abs(a);});
+  destroyChart('chart-trend');
+  charts['chart-trend']=new Chart(document.getElementById('chart-trend'),{type:'line',data:{labels:dates,datasets:[{label:'Income',data:dates.map(d=>Math.round((dInc[d]||0)/1e4)/100),borderColor:'#00ff99',backgroundColor:'rgba(0,255,153,0.05)',borderWidth:2,pointRadius:2,fill:true,tension:0.3},{label:'Expense',data:dates.map(d=>Math.round((dExp[d]||0)/1e4)/100),borderColor:'#ff4466',backgroundColor:'rgba(255,68,102,0.05)',borderWidth:2,pointRadius:2,borderDash:[4,3],fill:true,tension:0.3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#6a9ab8',font:{size:10},boxWidth:10}}},scales:{x:{ticks:{color:'#3a6a88',font:{size:9},maxRotation:45},grid:{color:'rgba(14,58,90,0.2)'}},y:{ticks:{color:'#3a6a88',font:{size:9},callback:v=>v+'M'},grid:{color:'rgba(14,58,90,0.2)'}}}}});
+
+  const cInc={},cExp={};
+  filtered.forEach(e=>{const c=e.charName||'Unknown';const a=parseFloat(e.amount||0);if(a>0)cInc[c]=(cInc[c]||0)+a;else cExp[c]=(cExp[c]||0)+Math.abs(a);});
+  const allC=[...new Set([...Object.keys(cInc),...Object.keys(cExp)])];
+  destroyChart('chart-chars');
+  charts['chart-chars']=new Chart(document.getElementById('chart-chars'),{type:'bar',data:{labels:allC,datasets:[{label:'Income',data:allC.map(c=>Math.round((cInc[c]||0)/1e4)/100),backgroundColor:'rgba(0,255,153,0.7)',borderRadius:2},{label:'Expense',data:allC.map(c=>-Math.round((cExp[c]||0)/1e4)/100),backgroundColor:'rgba(255,68,102,0.7)',borderRadius:2},{label:'Net',data:allC.map(c=>Math.round(((cInc[c]||0)-(cExp[c]||0))/1e4)/100),backgroundColor:'rgba(0,212,255,0.7)',borderRadius:2}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#6a9ab8',font:{size:10},boxWidth:10}}},scales:{x:{ticks:{color:'#3a6a88',font:{size:9},callback:v=>v+'M'},grid:{color:'rgba(14,58,90,0.2)'}},y:{ticks:{color:'#6a9ab8',font:{size:11}},grid:{display:false}}}}});
+
+  document.getElementById('table-chars').innerHTML=`<thead><tr><th>#</th><th>Character</th><th style="text-align:right;color:var(--accent3)">Income</th><th style="text-align:right;color:var(--danger)">Expense</th><th style="text-align:right;color:var(--accent)">Net</th></tr></thead><tbody>${allC.sort((a,b)=>(cInc[b]||0)-(cInc[a]||0)).map((c,i)=>{const inc2=cInc[c]||0,exp2=cExp[c]||0,net2=inc2-exp2;return`<tr><td style="color:var(--text3);font-family:'Share Tech Mono',monospace;font-size:11px">${i+1}</td><td>${c}</td><td class="num" style="color:var(--accent3)">+${fmtISK(inc2)}</td><td class="num" style="color:var(--danger)">${exp2>0?'-'+fmtISK(exp2):'—'}</td><td class="num" style="color:${net2>=0?'var(--accent)':'var(--danger)'}">${net2>=0?'+':''}${fmtISK(net2)}</td></tr>`;}).join('')}</tbody>`;
+}
+
+// ── CHAR LIST UI ──
+function renderCharList(){
+  document.getElementById('char-list').innerHTML=registeredChars.map((c,i)=>`
+    <div style="display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:5px 10px;">
+      <img src="https://images.evetech.net/characters/${c.charId}/portrait?size=32" style="width:22px;height:22px;border-radius:50%;" onerror="this.style.display='none'">
+      <span style="font-size:12px;color:var(--text2)">${c.charName}</span>
+      <span style="font-size:9px;color:var(--text3);font-family:'Share Tech Mono',monospace">${c.walletType==='corp'?'CORP':'PERSONAL'}</span>
+      ${registeredChars.length>1?`<span onclick="removeChar(${i})" style="color:var(--text3);font-size:13px;cursor:pointer;margin-left:2px;">×</span>`:''}
+    </div>`).join('');
+
+  const chars=registeredChars.map(c=>c.charName);
+  ['journal-char-filter','asset-char-filter'].forEach(id=>{
+    document.getElementById(id).innerHTML='<option value="">All Characters</option>'+chars.map(c=>`<option>${c}</option>`).join('');
   });
+  const allTypes=[...new Set(getAllJournal().map(e=>e.ref_type).filter(Boolean))].sort();
+  document.getElementById('journal-type-filter').innerHTML='<option value="">All Types</option>'+allTypes.map(t=>`<option value="${t}">${t.replace(/_/g,' ')}</option>`).join('');
+  const allLocs=[...new Set(getAllAssets().map(a=>String(a.location_id)))].sort().slice(0,100);
+  document.getElementById('asset-loc-filter').innerHTML='<option value="">All Locations</option>'+allLocs.map(l=>`<option value="${l}">${l}</option>`).join('');
 }
 
-function setPeriod(days) {
-  currentPeriod = days;
-  document.querySelectorAll('.period-btn').forEach((btn, i) => {
-    btn.classList.toggle('active', [7,14,30,0][i] === days);
-  });
-  renderDashboard();
+function removeChar(idx){
+  registeredChars.splice(idx,1);delete charDataCache[idx];
+  localStorage.removeItem(DATA_PFX+idx);
+  localStorage.setItem(CHARS_KEY,JSON.stringify(registeredChars));
+  if(!registeredChars.length){logout();return;}
+  renderAll();
 }
 
-function destroyChart(id) {
-  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+function exportCSV(){
+  const all=getAllJournal();
+  if(!all.length){showToast('No data','error');return;}
+  const keys=[...new Set(all.flatMap(e=>Object.keys(e)))];
+  const csv=[keys.join(','),...all.map(e=>keys.map(k=>JSON.stringify(e[k]??'')).join(','))].join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=`ewr_${new Date().toISOString().slice(0,10)}.csv`;a.click();
+  showToast('CSV exported','success');
 }
 
-function exportCSV() {
-  const filtered = filterByPeriod(allEntries, currentPeriod);
-  if (!filtered.length) { showToast('No data', 'error'); return; }
-  const keys = [...new Set(filtered.flatMap(e => Object.keys(e)))];
-  const csv = [keys.join(','), ...filtered.map(e => keys.map(k => JSON.stringify(e[k]??'')).join(','))].join('\n');
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
-  a.download = `eve_wallet_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
-  showToast('CSV exported', 'success');
+const pages=['overview','assets','journal','orders'];
+function switchPage(p){
+  pages.forEach(x=>document.getElementById(`page-${x}`).style.display=x===p?'':'none');
+  document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',pages[i]===p));
+  if(p==='assets')renderAssets();
+  if(p==='journal')renderJournal();
+  if(p==='orders')renderOrders();
 }
 
-function logout() {
-  localStorage.removeItem(TOKEN_STORAGE);
-  localStorage.removeItem(CHARS_STORAGE);
-  for (let i = 0; i < 10; i++) localStorage.removeItem(DATA_STORAGE + '_' + i);
-  registeredChars = [];
-  allEntries = [];
-  activeCharIdx = 0;
-  document.getElementById('login-screen').classList.add('visible');
-  document.getElementById('dashboard').style.display = 'none';
-  setStatus(false);
+function setPeriod(d){
+  currentPeriod=d;
+  document.querySelectorAll('.period-btn').forEach((b,i)=>b.classList.toggle('active',[7,14,30][i]===d));
+  renderOverviewCharts();
 }
 
-function showLoading(msg) {
-  document.getElementById('loading').style.display = 'flex';
-  document.getElementById('loading-text').textContent = msg || 'LOADING...';
-}
-
-function hideLoading() { document.getElementById('loading').style.display = 'none'; }
-
-function showToast(msg, type='') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'show ' + type;
-  setTimeout(() => { t.className = ''; }, 3000);
-}
-
-function setStatus(online) {
-  document.getElementById('status-dot').className = 'status-dot' + (online ? ' online' : '');
-  document.getElementById('status-text').textContent = online ? 'ONLINE' : 'OFFLINE';
-}
-document.getElementById('journal-search').addEventListener('input', () => renderJournal(filterByPeriod(allEntries, currentPeriod)));
-document.getElementById('journal-filter').addEventListener('change', () => renderJournal(filterByPeriod(allEntries, currentPeriod)));
-
-async function init() {
-  document.getElementById('login-screen').classList.add('visible');
-  const params = new URLSearchParams(location.search);
-  const code = params.get('code');
-
-  if (code) {
-    showLoading('Authenticating...');
-    const ok = await handleCallback();
-    if (!ok) { hideLoading(); return; }
-  }
-
-  const tokenData = JSON.parse(localStorage.getItem(TOKEN_STORAGE) || 'null');
-  if (!tokenData) { hideLoading(); return; }
-
-  walletType = localStorage.getItem('eve_wallet_type') || 'personal';
-  registeredChars = loadChars();
-  const isAddingChar = localStorage.getItem('eve_adding_char') === '1';
-  localStorage.removeItem('eve_adding_char');
-
-  showLoading('Loading wallet data...');
-  const ok = await loadData(isAddingChar ? registeredChars.length : activeCharIdx);
-  if (!ok) { hideLoading(); return; }
-
-  const charEntry = {
-    charId: charInfo.CharacterID,
-    charName: charInfo.CharacterName,
-    walletType,
-    token: tokenData
-  };
-
-  if (isAddingChar) {
-    const exists = registeredChars.findIndex(c => c.charId === charInfo.CharacterID);
-    if (exists >= 0) {
-      registeredChars[exists] = charEntry;
-      activeCharIdx = exists;
-    } else {
-      activeCharIdx = registeredChars.length;
-      registeredChars.push(charEntry);
-    }
-  } else {
-    if (registeredChars.length === 0) {
-      registeredChars.push(charEntry);
-      activeCharIdx = 0;
-    }
-  }
-  saveChars();
-
+function renderAll(){
   renderCharList();
-  document.getElementById('login-screen').classList.remove('visible');
-  document.getElementById('dashboard').style.display = 'block';
-  setStatus(true);
-  renderDashboard();
-  hideLoading();
+  recalcTotal();
+  renderOverviewCharts();
 }
 
+// ── INIT ──
+async function init(){
+  document.getElementById('login-screen').classList.add('visible');
+  const code=new URLSearchParams(location.search).get('code');
+  if(code){const ok=await handleCallback();if(!ok){hideLoading();return;}}
+
+  const tokenData=JSON.parse(localStorage.getItem(TOKEN_KEY)||'null');
+  if(!tokenData){hideLoading();return;}
+
+  walletType=localStorage.getItem('ewr_wtype')||'personal';
+  registeredChars=JSON.parse(localStorage.getItem(CHARS_KEY)||'[]');
+  const isAdding=localStorage.getItem('ewr_adding')==='1';
+  localStorage.removeItem('ewr_adding');
+
+  showLoading('Fetching character info...');
+  let charInfo;
+  try{charInfo=await esiFetch(SSO_VERIFY,tokenData.access_token);}
+  catch(e){showToast('Session expired','error');hideLoading();return;}
+
+  let corpId=null;
+  if(walletType==='corp'){
+    try{const cd=await esiFetch(`${ESI}/characters/${charInfo.CharacterID}/`,tokenData.access_token);corpId=cd.corporation_id;}catch(e){}
+  }
+
+  const charEntry={charId:charInfo.CharacterID,charName:charInfo.CharacterName,walletType,corpId,token:tokenData};
+  const existingIdx=registeredChars.findIndex(c=>c.charId===charInfo.CharacterID);
+
+  if(isAdding){
+    if(existingIdx>=0)registeredChars[existingIdx]=charEntry;
+    else registeredChars.push(charEntry);
+  }else{
+    if(registeredChars.length===0)registeredChars.push(charEntry);
+    else if(existingIdx>=0)registeredChars[existingIdx]=charEntry;
+    else registeredChars[0]=charEntry;
+  }
+  localStorage.setItem(CHARS_KEY,JSON.stringify(registeredChars));
+
+  // 모든 캐릭터 데이터 로드
+  for(let i=0;i<registeredChars.length;i++){
+    const c=registeredChars[i];
+    const t=i===registeredChars.length-1?tokenData.access_token:(c.token?.access_token||tokenData.access_token);
+    try{charDataCache[i]=await loadCharData(i,t);}
+    catch(e){console.error(e);charDataCache[i]={walletBalance:0,assetValue:0,totalLP:0,totalSP:0,orderValue:0,contractValue:0,journal:JSON.parse(localStorage.getItem(DATA_PFX+i)||'[]'),priceMap:{},corpDivisions:null,assets:[],orders:[],contracts:[]};}
+  }
+
+  document.getElementById('login-screen').classList.remove('visible');
+  document.getElementById('dashboard').style.display='block';
+  setStatus(true);
+  renderAll();
+  hideLoading();
+  showToast(`Loaded ${registeredChars.length} character(s)`,'success');
+}
+
+document.getElementById('journal-search').addEventListener('input',renderJournal);
+document.getElementById('journal-type-filter').addEventListener('change',renderJournal);
+document.getElementById('journal-char-filter').addEventListener('change',renderJournal);
+document.getElementById('asset-search').addEventListener('input',renderAssets);
 init();
 </script>
 </body>
