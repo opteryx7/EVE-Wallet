@@ -268,7 +268,7 @@ main{max-width:1440px;margin:0 auto;padding:1.5rem 2rem;}
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:1.25rem;" id="mission-summary"></div>
     <div class="panel">
       <div class="ph">
-        <span class="pt">미션 일별 기록 (최근 30일)</span>
+        <span class="pt">미션 일별 기록 <span style="color:var(--text3);font-size:9px;font-family:'Share Tech Mono',monospace;">(이브 시간 기준, 최근 30일)</span></span>
         <div style="display:flex;gap:8px;align-items:center;">
           <div class="sub-tabs" id="mission-char-tabs" style="margin-bottom:0;"></div>
         </div>
@@ -399,10 +399,14 @@ async function calcLpRate(corpId){
 
   const grp=CORP_GROUP[corpId];
   const itemName=s.itemName||(grp?NET_RESONATOR[grp]:'');
-  if(!itemName)return DEFAULT_LP_RATE;
-
-  // LP Store 오퍼 조회
-  const facCorpId=FACTION_CORP_ID[grp]||corpId;
+  // itemName이 없으면 (미지정 팩션) DEFAULT 반환
+  if(!itemName){
+    lpPriceCache[corpId]={rate:DEFAULT_LP_RATE,ts:Date.now()};
+    saveLpPriceCache();
+    return DEFAULT_LP_RATE;
+  }
+  // LP Store 오퍼 조회 - grp에 해당하는 대표 corp, 없으면 corpId 직접 사용
+  const facCorpId=(grp&&FACTION_CORP_ID[grp])||corpId;
   showLoading(`LP 가격 조회 중: ${itemName}...`);
   const offer=await fetchLpStoreOffer(facCorpId, itemName);
   if(!offer){hideLoading();return DEFAULT_LP_RATE;}
@@ -795,8 +799,10 @@ let activeMissionChar='all';
 
 function analyzeMissions(journalEntries){
   // agent_mission_reward만 추출
+  // 미션 ISK = 완료보상 + 시간보상 + 현상금 3항목 합산
+  const MISSION_TYPES=['agent_mission_reward','agent_mission_time_bonus_reward','bounty_prizes'];
   const rewards=journalEntries
-    .filter(e=>e.ref_type==='agent_mission_reward'&&parseFloat(e.amount||0)>0)
+    .filter(e=>MISSION_TYPES.includes(e.ref_type)&&parseFloat(e.amount||0)>0)
     .map(e=>({
       date:e.date,
       ts:new Date(e.date).getTime(),
@@ -824,12 +830,22 @@ function analyzeMissions(journalEntries){
         used.add(j);
       }
     }
-    const totalISK=group.reduce((s,r)=>s+r.amount,0);
+    // 분배 미션: 여러 캐릭이 같은 시간에 같은 금액 수령
+    // → 실제 미션 보상 = 각 캐릭 수령액의 합(분배 전 총액 추정)
+    // 단, 같은 캐릭이 중복으로 들어오면 안 되므로 charId 기준으로 dedup
+    const charGroups={};
+    group.forEach(r=>{
+      const key=r.charId||r.charName;
+      if(!charGroups[key])charGroups[key]=[];
+      charGroups[key].push(r.amount);
+    });
+    // 각 캐릭의 대표 금액(첫번째) 합산 = 분배 전 총 미션 보상 추정
+    const totalISK=Object.values(charGroups).reduce((s,amounts)=>s+amounts[0],0);
     missions.push({
       ts:rewards[i].ts,
       date:rewards[i].date.slice(0,10),
       totalISK,
-      chars:group.map(r=>r.charName),
+      chars:[...new Set(group.map(r=>r.charName))],
       estLP:totalISK/MISSION_ISK_PER_LP,
     });
   }
@@ -867,7 +883,7 @@ function renderMission(){
     <div class="sc"><div class="sl">총 미션 수 (30일)</div><div class="sv" style="color:var(--accent)">${totalMissions.toLocaleString()}<span class="su">개</span></div></div>
     <div class="sc"><div class="sl">미션 ISK 수입</div><div class="sv" style="color:var(--accent3)">${fmtISK(totalISK)}<span class="su">ISK</span></div></div>
     <div class="sc"><div class="sl">추정 LP 획득</div><div class="sv" style="color:var(--gold)">${fmtNum(Math.round(totalEstLP))}<span class="su">LP</span></div></div>
-    <div class="sc"><div class="sl">추정 LP 가치</div><div class="sv" style="color:var(--gold)">${fmtISK(totalEstLPVal)}<span class="su">ISK</span></div><div class="ss">${mainRate.toLocaleString()} ISK/LP 기준</div></div>`;
+    <div class="sc"><div class="sl">추정 LP 가치</div><div class="sv" style="color:var(--gold)">${fmtISK(totalEstLPVal)}<span class="su">ISK</span></div><div class="ss">${mainRate>DEFAULT_LP_RATE?mainRate.toLocaleString()+' ISK/LP (공명기 기준)':mainRate.toLocaleString()+' ISK/LP (기본값)'}</div></div>`;
 
   // 날짜별 집계
   const byDate={};
@@ -916,7 +932,14 @@ function setActiveLP(v){activeLPChar=v;buildSubTabs('lp-char-tabs','activeLPChar
 
 // ── JOURNAL ──
 function getAllJournal(){const all=[];registeredChars.forEach((_,i)=>{const d=charDataCache[i];if(d?.journal)all.push(...d.journal);});return all.sort((a,b)=>new Date(b.date)-new Date(a.date));}
-function filterByPeriod(entries,days){if(!days)return entries;const c=new Date();c.setDate(c.getDate()-days);return entries.filter(e=>new Date(e.date)>=c);}
+function filterByPeriod(entries,days){
+  if(!days)return entries;
+  // EVE 서버 = UTC 기준, 30일 전 자정(00:00:00 UTC)
+  const cutoff=new Date();
+  cutoff.setUTCDate(cutoff.getUTCDate()-days);
+  cutoff.setUTCHours(0,0,0,0);
+  return entries.filter(e=>new Date(e.date)>=cutoff);
+}
 
 function renderJournal(){
   const s=document.getElementById('journal-search').value.toLowerCase();
