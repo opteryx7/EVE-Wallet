@@ -116,11 +116,11 @@ main{max-width:1440px;margin:0 auto;padding:1.5rem 2rem;}
 .si:focus{border-color:var(--accent2);}
 .si::placeholder{color:var(--text3);}
 .lp-table-wrap{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:1.25rem;}
-.lp-card{background:var(--bg2);border:1px solid var(--border);border-radius:4px;overflow:hidden;}
+.lp-card{background:var(--bg2);border:1px solid var(--border);border-radius:4px;overflow:visible;}
 .lp-card-header{padding:.75rem 1rem;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
 .lp-char-name{font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;color:var(--text);}
 .lp-total{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--gold);}
-.lp-row{display:flex;justify-content:space-between;align-items:center;padding:5px 1rem;border-bottom:1px solid rgba(14,58,90,.3);font-size:12px;}
+.lp-row{display:flex;flex-direction:column;padding:6px 0;border-bottom:1px solid rgba(14,58,90,.3);font-size:12px;}
 .lp-row:last-child{border-bottom:none;}
 .lp-faction{color:var(--text2);font-size:12px;}
 .lp-pts{font-family:'Share Tech Mono',monospace;color:var(--gold);font-size:11px;}
@@ -152,9 +152,15 @@ main{max-width:1440px;margin:0 auto;padding:1.5rem 2rem;}
       <div class="logo-sub">ISK · ASSETS · PERFORMANCE</div>
     </div>
   </div>
-  <div style="display:flex;align-items:center;gap:8px;">
-    <div id="status-dot" style="width:6px;height:6px;border-radius:50%;background:var(--text3);"></div>
-    <span id="status-text" style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text3);">OFFLINE</span>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <select id="lang-select" onchange="setLang(this.value)" style="background:var(--bg3);border:1px solid var(--border);border-radius:3px;color:var(--text2);font-family:'Share Tech Mono',monospace;font-size:11px;padding:4px 8px;outline:none;cursor:pointer;">
+      <option value="ko">한국어</option>
+      <option value="en">English</option>
+    </select>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <div id="status-dot" style="width:6px;height:6px;border-radius:50%;background:var(--text3);"></div>
+      <span id="status-text" style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text3);">OFFLINE</span>
+    </div>
   </div>
 </header>
 
@@ -171,7 +177,7 @@ main{max-width:1440px;margin:0 auto;padding:1.5rem 2rem;}
       <div class="wtype-btn active" id="btn-personal" onclick="selectWT('personal')"><span class="wtype-icon">👤</span>Personal</div>
       <div class="wtype-btn" id="btn-corp" onclick="selectWT('corp')"><span class="wtype-icon">🏢</span>Corp</div>
     </div>
-    <button class="btn-primary" onclick="startLogin()">LOGIN WITH EVE SSO</button>
+    <button class="btn-primary" onclick="startLogin()" id="btn-login">LOGIN WITH EVE SSO</button>
     <div style="margin-top:.875rem;font-size:11px;color:var(--text3);line-height:1.6;">Corp wallet requires Accountant role.</div>
   </div>
 </div>
@@ -183,9 +189,9 @@ main{max-width:1440px;margin:0 auto;padding:1.5rem 2rem;}
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px;">
     <div id="char-list" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;"></div>
     <div style="display:flex;gap:8px;">
-      <button class="btn-sm g" onclick="addCharacter()">+ Add Character</button>
-      <button class="btn-sm" onclick="exportCSV()">Export CSV</button>
-      <button class="btn-sm" onclick="logout()">Logout</button>
+      <button class="btn-sm g" onclick="addCharacter()" id="btn-add-char">+ Add Character</button>
+      <button class="btn-sm" onclick="exportCSV()" id="btn-export">Export CSV</button>
+      <button class="btn-sm" onclick="logout()" id="btn-logout">Logout</button>
     </div>
   </div>
 
@@ -223,12 +229,16 @@ main{max-width:1440px;margin:0 auto;padding:1.5rem 2rem;}
       <div class="panel"><div class="ts"><table class="data-table" id="corp-div-table"></table></div></div>
     </div>
     <div class="divider">Income & Expense</div>
-    <div style="display:flex;gap:8px;margin-bottom:1rem;">
+    <div style="display:flex;gap:12px;margin-bottom:1rem;align-items:center;flex-wrap:wrap;">
       <div class="period-bar">
         <button class="pb active" onclick="setPeriod(7)">7D</button>
         <button class="pb" onclick="setPeriod(14)">14D</button>
         <button class="pb" onclick="setPeriod(30)">30D</button>
       </div>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--gold);">
+        <input type="checkbox" id="tog-est-lp" onchange="renderOverviewCharts()" style="accent-color:var(--gold);width:14px;height:14px;">
+        <span id="txt-est-lp">추정 LP 환산 소득 포함</span>
+      </label>
     </div>
     <div class="stat-grid" id="stat-grid"></div>
     <div class="cgrid" style="margin-bottom:16px;">
@@ -287,7 +297,7 @@ main{max-width:1440px;margin:0 auto;padding:1.5rem 2rem;}
   <!-- ── LP ── -->
   <div id="page-lp" style="display:none;">
     <div class="sub-tabs" id="lp-char-tabs"></div>
-    <div class="divider">LP by Faction <span style="color:var(--gold);margin-left:8px;font-size:10px;">1,500 ISK / LP</span></div>
+    <div class="divider" id="txt-lp-title">팩션별 LP <span style="color:var(--gold);margin-left:8px;font-size:10px;">LP Store 대표 아이템 기준</span></div>
     <div id="lp-content"></div>
   </div>
 
@@ -305,7 +315,60 @@ const SSO_AUTH='https://login.eveonline.com/v2/oauth/authorize';
 const SSO_TOKEN='https://login.eveonline.com/v2/oauth/token';
 const SSO_VERIFY='https://login.eveonline.com/oauth/verify';
 const CB=location.origin+location.pathname;
-const LP_RATE=1500;
+// LP 설정 - localStorage에서 복원
+const LP_SETTINGS_KEY='ewr_lp_settings';
+const NET_RESONATOR_CORPS={
+  // Guristas
+  1000010:'Guristas NET Resonator',1000127:'Guristas NET Resonator',
+  // Sansha
+  1000005:'Sansha NET Resonator',1000006:'Sansha NET Resonator',
+  // Serpentis  
+  1000013:'Serpentis NET Resonator',1000128:'Serpentis NET Resonator',
+  // Angel Cartel
+  1000012:'Angel NET Resonator',1000110:'Angel NET Resonator',
+  // Blood Raiders
+  1000006:'Blood Raider NET Resonator',
+  // Mordu's Legion
+  1000108:'Mordu NET Resonator',
+};
+// corp_id → 팩션 그룹
+const CORP_FACTION_GROUP={
+  1000010:'guristas',1000127:'guristas',
+  1000005:'sansha',
+  1000013:'serpentis',1000128:'serpentis',
+  1000012:'angel',1000110:'angel',
+  1000006:'blood',
+  1000108:'mordu',
+};
+const NET_RESONATOR_NAMES={
+  guristas:'Guristas NET Resonator',
+  sansha:'Sansha NET Resonator',
+  serpentis:'Serpentis NET Resonator',
+  angel:'Angel NET Resonator',
+  blood:'Blood Raider NET Resonator',
+  mordu:'Mordu NET Resonator',
+};
+let lpSettings={}; // corp_id -> {itemName, priceType:'sell'|'buy', manualRate:0, rate:1000}
+let lpMainFaction={}; // charId -> corp_id (주 팩션)
+const DEFAULT_LP_RATE=1000;
+const MISSION_ISK_PER_LP=210; // 미션 ISK 보상 ÷ 이 값 = 추정 LP
+
+function loadLpSettings(){
+  try{
+    const s=JSON.parse(localStorage.getItem(LP_SETTINGS_KEY)||'{}');
+    lpSettings=s.settings||{};
+    lpMainFaction=s.mainFaction||{};
+  }catch(e){}
+}
+function saveLpSettings(){
+  try{localStorage.setItem(LP_SETTINGS_KEY,JSON.stringify({settings:lpSettings,mainFaction:lpMainFaction}));}catch(e){}
+}
+function getLpRate(corpId){
+  const s=lpSettings[corpId];
+  if(!s)return DEFAULT_LP_RATE;
+  if(s.manualRate&&s.manualRate>0)return s.manualRate;
+  return s.rate||DEFAULT_LP_RATE;
+}
 const SCOPES=['esi-wallet.read_character_wallet.v1','esi-wallet.read_corporation_wallets.v1','esi-assets.read_assets.v1','esi-assets.read_corporation_assets.v1','esi-characters.read_loyalty.v1','esi-skills.read_skills.v1','esi-markets.read_character_orders.v1','esi-markets.read_corporation_orders.v1','esi-contracts.read_character_contracts.v1','esi-contracts.read_corporation_contracts.v1','esi-universe.read_structures.v1'].join(' ');
 
 let walletType='personal',registeredChars=[],charDataCache={},currentPeriod=7,charts={};
@@ -346,6 +409,108 @@ async function loadSpPrices(){
     const el=document.getElementById('sp-basis-text');
     if(el&&net>0)el.textContent=`(${fmtISK(net)}/500k SP)`;
   }catch(e){}
+}
+
+
+// ── 언어 시스템 ──
+const LANG_KEY='ewr_lang';
+let currentLang='ko';
+const T={
+  ko:{
+    overview:'개요',assets:'자산',journal:'저널',orders:'오더 & 계약',lp:'LP',
+    addChar:'+ 캐릭터 추가',exportCsv:'CSV 저장',logout:'로그아웃',
+    totalPortfolio:'총 포트폴리오 가치',calculating:'계산 중...',
+    wallet:'지갑',assetsLbl:'자산',ordersLbl:'오더',contracts:'계약',lpVal:'LP 가치',spVal:'SP 가치',
+    charBreakdown:'캐릭터별 현황',corpDivisions:'콥 지갑 디비전',
+    incomeExpense:'수입 & 지출',incomeByType:'수입 유형별',dailyIncome:'일별 수입 vs 지출',
+    charPnl:'캐릭터별 손익',totalIncome:'총 수입',totalExpense:'총 지출',netProfit:'순이익',characters:'캐릭터',
+    estLp:'추정 LP 환산 소득 포함',
+    assetInventory:'자산 목록',allLoc:'전체 위치',allChar:'전체 캐릭터',searchItem:'아이템명 검색...',
+    listView:'목록 뷰',byStation:'스테이션별',
+    walletJournal:'지갑 저널',search:'검색...',allTypes:'전체 유형',
+    activeOrders:'활성 마켓 오더',outstandingContracts:'미완료 계약',
+    lpByFaction:'팩션별 LP',lpBasis:'LP Store 대표 아이템 기준',
+    mainFaction:'주 미션 팩션',item:'아이템명',priceType:'가격 유형',manualRate:'직접 입력 (ISK/LP)',
+    sell:'Sell',buy:'Buy',
+    loginTitle:'EVE WALLET REVIEW',loginDesc:'EVE SSO로 로그인하면 지갑, 자산, 성과를 분석할 수 있어요.
+모든 데이터는 브라우저에서만 처리됩니다.',
+    personal:'개인',corp:'콥',login:'EVE SSO 로그인',corpNote:'콥 지갑은 Accountant 권한이 필요합니다.',
+    online:'온라인',offline:'오프라인',
+    char:'캐릭터',income:'수입',expense:'지출',net:'순이익',
+    item2:'아이템',location:'위치',flag:'플래그',qty:'수량',estValue:'예상 가치',
+    date:'날짜',type:'유형',description:'설명',amount:'금액',tax:'세금',balance:'잔액',
+    orders2:'오더',bs:'B/S',price:'가격',remain:'잔여',totalValue:'총 가치',
+    title2:'제목',expires:'만료',collateral:'담보',
+    noData:'데이터 없음',
+    showing:'개 표시 중',of:'/',
+    walletBalance:'지갑 잔고',sellOrders:'매도 오더',lpPts:'LP',spPts:'SP',total:'합계 ISK',
+  },
+  en:{
+    overview:'Overview',assets:'Assets',journal:'Journal',orders:'Orders & Contracts',lp:'LP',
+    addChar:'+ Add Character',exportCsv:'Export CSV',logout:'Logout',
+    totalPortfolio:'Total Portfolio Value',calculating:'Calculating...',
+    wallet:'Wallet',assetsLbl:'Assets',ordersLbl:'Orders',contracts:'Contracts',lpVal:'LP Value',spVal:'SP Value',
+    charBreakdown:'Character Breakdown',corpDivisions:'Corp Wallet Divisions',
+    incomeExpense:'Income & Expense',incomeByType:'Income by Type',dailyIncome:'Daily Income vs Expense',
+    charPnl:'Character P&L',totalIncome:'Total Income',totalExpense:'Total Expense',netProfit:'Net Profit',characters:'Characters',
+    estLp:'Include Est. LP Income',
+    assetInventory:'Asset Inventory',allLoc:'All Locations',allChar:'All Characters',searchItem:'Search by item name...',
+    listView:'List View',byStation:'By Station',
+    walletJournal:'Wallet Journal',search:'Search...',allTypes:'All Types',
+    activeOrders:'Active Market Orders',outstandingContracts:'Outstanding Contracts',
+    lpByFaction:'LP by Faction',lpBasis:'LP Store item basis',
+    mainFaction:'Main Mission Faction',item:'Item Name',priceType:'Price Type',manualRate:'Manual (ISK/LP)',
+    sell:'Sell',buy:'Buy',
+    loginTitle:'EVE WALLET REVIEW',loginDesc:'Sign in with EVE SSO to analyze your wallet, assets, and performance.\nAll data is processed locally in your browser.',
+    personal:'Personal',corp:'Corp',login:'LOGIN WITH EVE SSO',corpNote:'Corp wallet requires Accountant role.',
+    online:'ONLINE',offline:'OFFLINE',
+    char:'Character',income:'Income',expense:'Expense',net:'Net',
+    item2:'Item',location:'Location',flag:'Flag',qty:'Qty',estValue:'Est. Value',
+    date:'Date',type:'Type',description:'Description',amount:'Amount',tax:'Tax',balance:'Balance',
+    orders2:'Orders',bs:'B/S',price:'Price',remain:'Remain',totalValue:'Total Value',
+    title2:'Title',expires:'Expires',collateral:'Collateral',
+    noData:'NO DATA',
+    showing:'Showing',of:'of',
+    walletBalance:'Wallet Balance',sellOrders:'Orders (sell)',lpPts:'LP',spPts:'SP',total:'Total ISK',
+  }
+};
+function t(key){return T[currentLang]?.[key]||T['en']?.[key]||key;}
+function setLang(lang){
+  currentLang=lang;
+  localStorage.setItem(LANG_KEY,lang);
+  applyLang();
+  renderAll();
+}
+function applyLang(){
+  // 네비게이션
+  const navKeys=['overview','assets','journal','orders','lp'];
+  document.querySelectorAll('.nav-tab').forEach((el,i)=>{if(navKeys[i])el.textContent=t(navKeys[i]);});
+  // 헤더 버튼들은 renderCharList에서 처리
+  // 정적 텍스트
+  const ids={
+    'txt-income-type':'incomeByType','txt-daily-income':'dailyIncome',
+    'txt-est-lp':'estLp','txt-lp-title':'lpByFaction',
+  };
+  Object.entries(ids).forEach(([id,key])=>{const el=document.getElementById(id);if(el)el.childNodes[0]&&(el.childNodes[0].textContent=t(key));});
+  // 로그인 화면
+  const lt=document.querySelector('.login-title');if(lt)lt.textContent=t('loginTitle');
+  const ld=document.querySelector('.login-desc');if(ld)ld.innerHTML=t('loginDesc').replace('\n','<br>');
+  const ln=document.querySelector('.login-card>div:last-child');if(ln)ln.textContent=t('corpNote');
+  // 서브탭 버튼들 - 다음 렌더링시 자동 처리
+  document.getElementById('status-text').textContent=document.getElementById('status-dot').style.background.includes('accent3')?t('online'):t('offline');
+  // 버튼 텍스트
+  const ba=document.getElementById('btn-add-char');if(ba)ba.textContent=t('addChar');
+  const be=document.getElementById('btn-export');if(be)be.textContent=t('exportCsv');
+  const bl=document.getElementById('btn-logout');if(bl)bl.textContent=t('logout');
+  // wtype 버튼
+  const bp=document.getElementById('btn-personal');if(bp)bp.innerHTML=`<span class="wtype-icon">👤</span>${t('personal')}`;
+  const bc=document.getElementById('btn-corp');if(bc)bc.innerHTML=`<span class="wtype-icon">🏢</span>${t('corp')}`;
+  const lb=document.querySelector('.btn-primary');if(lb)lb.textContent=t('login');
+  // divider 업데이트
+  const lt2=document.getElementById('txt-lp-title');if(lt2)lt2.innerHTML=t('lpByFaction')+`<span style="color:var(--gold);margin-left:8px;font-size:10px;">${t('lpBasis')}</span>`;
+  const it=document.getElementById('txt-income-type');if(it)it.textContent=t('incomeByType');
+  const dt=document.getElementById('txt-daily-income');if(dt)dt.textContent=t('dailyIncome');
+  const el=document.getElementById('txt-est-lp');if(el)el.textContent=t('estLp');
 }
 
 function getSpValue(sp){
@@ -475,7 +640,7 @@ function recalcTotal(){
   const tl=document.getElementById('tog-lp').checked;
   const ts=document.getElementById('tog-sp').checked;
   let total=0;
-  registeredChars.forEach((_,i)=>{const d=charDataCache[i];if(!d)return;if(tw)total+=d.walletBalance||0;if(ta)total+=d.assetValue||0;if(to)total+=d.orderValue||0;if(tc)total+=d.contractValue||0;if(tl)total+=(d.totalLP||0)*LP_RATE;if(ts)total+=getSpValue(d.totalSP||0);});
+  registeredChars.forEach((_,i)=>{const d=charDataCache[i];if(!d)return;if(tw)total+=d.walletBalance||0;if(ta)total+=d.assetValue||0;if(to)total+=d.orderValue||0;if(tc)total+=d.contractValue||0;if(tl)total+=(d.loyaltyPoints||[]).reduce((s,l)=>s+l.loyalty_points*getLpRate(l.corporation_id),0);if(ts)total+=getSpValue(d.totalSP||0);});
   document.getElementById('hero-total').textContent=fmtISK(total);
   const parts=[];if(tw)parts.push('Wallet');if(ta)parts.push('Assets');if(to)parts.push('Orders');if(tc)parts.push('Contracts');if(tl)parts.push('LP');if(ts)parts.push('SP');
   document.getElementById('hero-sub').textContent=`Includes: ${parts.join(' · ')} · ${registeredChars.length} char(s)`;
@@ -487,7 +652,7 @@ function renderCharBreakdown(){
   document.getElementById('char-breakdown').innerHTML=registeredChars.map((c,i)=>{
     const d=charDataCache[i];
     if(!d)return`<div class="cc"><div class="cch"><img class="cp" src="https://images.evetech.net/characters/${c.charId}/portrait?size=64"><div><div class="ccn">${c.charName}</div><div class="cct">Loading...</div></div></div></div>`;
-    const w=d.walletBalance||0,a=d.assetValue||0,o=d.orderValue||0,ct=d.contractValue||0,lp=(d.totalLP||0)*LP_RATE,sp=getSpValue(d.totalSP||0);
+    const w=d.walletBalance||0,a=d.assetValue||0,o=d.orderValue||0,ct=d.contractValue||0,lp=(d.loyaltyPoints||[]).reduce((s,l)=>s+l.loyalty_points*getLpRate(l.corporation_id),0),sp=getSpValue(d.totalSP||0);
     const net=w+a+o+ct+lp+sp;
     let divRows='';
     if(c.walletType==='corp'&&d.corpDivisions)divRows=d.corpDivisions.map(dv=>`<div class="cr"><span class="crl">Division ${dv.division}</span><span class="crv">${fmtISK(dv.balance)} ISK</span></div>`).join('');
@@ -707,41 +872,184 @@ async function renderOrders(){
   </tr>`).join('')}</tbody>`;
 }
 
+
+function initDefaultLpSettings(){
+  // 각 캐릭의 LP 데이터를 보고 설정 없는 팩션에 기본값 적용
+  registeredChars.forEach((_,i)=>{
+    const d=charDataCache[i];
+    if(!d?.loyaltyPoints)return;
+    d.loyaltyPoints.forEach(l=>{
+      const corpId=l.corporation_id;
+      if(!lpSettings[corpId]){
+        const factionGroup=CORP_FACTION_GROUP[corpId];
+        lpSettings[corpId]={
+          itemName:NET_RESONATOR_NAMES[factionGroup]||'',
+          priceType:'sell',
+          manualRate:0,
+          rate:DEFAULT_LP_RATE
+        };
+      }
+    });
+  });
+  saveLpSettings();
+}
+
 // ── LP ──
+async function searchItemTypeId(name){
+  try{
+    const r=await fetch(`${ESI}/search/?categories=inventory_type&search=${encodeURIComponent(name)}&strict=false`);
+    if(!r.ok)return null;
+    const d=await r.json();
+    const ids=d.inventory_type||[];
+    if(!ids.length)return null;
+    // 이름 확인
+    await resolveTypeNames(ids.slice(0,5));
+    const exact=ids.find(id=>nameCache.types[id]?.toLowerCase()===name.toLowerCase());
+    return exact||ids[0];
+  }catch(e){return null;}
+}
+
+async function getLpItemPrice(typeId,priceType){
+  try{
+    // Jita (10000002) sell/buy 가격
+    const r=await fetch(`${ESI}/markets/10000002/orders/?type_id=${typeId}&order_type=${priceType}`);
+    if(!r.ok)return 0;
+    const orders=await r.json();
+    if(!orders.length)return 0;
+    if(priceType==='sell')return Math.min(...orders.map(o=>o.price));
+    else return Math.max(...orders.map(o=>o.price));
+  }catch(e){return 0;}
+}
+
+async function updateLpRate(corpId,settingKey){
+  const s=lpSettings[corpId]||{};
+  if(s.manualRate&&s.manualRate>0){return;}
+  const itemName=s.itemName||NET_RESONATOR_NAMES[CORP_FACTION_GROUP[corpId]]||'';
+  if(!itemName){s.rate=DEFAULT_LP_RATE;lpSettings[corpId]=s;return;}
+  showLoading(`Fetching price: ${itemName}...`);
+  const typeId=await searchItemTypeId(itemName);
+  if(!typeId){hideLoading();s.rate=DEFAULT_LP_RATE;lpSettings[corpId]=s;return;}
+  const price=await getLpItemPrice(typeId,s.priceType||'sell');
+  // LP Store 비용 고려 없이 단순 아이템 가격 / LP 코스트로 계산
+  // NET Resonator: 1개당 약 500 LP 소모 (팩션 공통)
+  // NET Resonator LP 코스트: ~64,000 LP (팩션 공통 근사값)
+  // 단, 단순히 마켓 가격 / LP코스트로 ISK/LP 계산
+  const lpCost=64000;
+  s.rate=price>0?Math.round(price/lpCost):DEFAULT_LP_RATE;
+  s.typeId=typeId;
+  s.itemPrice=price;
+  lpSettings[corpId]=s;
+  saveLpSettings();
+  hideLoading();
+}
+
 function renderLP(){
   const container=document.getElementById('lp-content');
   let chars=registeredChars;
-  if(activeLPChar!=='all')chars=chars.filter(c=>c.charName===activeLPChar);
+  if(activeLPChar!=='all')chars=chars.filter(ch=>ch.charName===activeLPChar);
 
-  const cards=chars.map((c,_)=>{
-    const idx=registeredChars.findIndex(x=>x.charId===c.charId);
+  const cards=chars.map((ch)=>{
+    const idx=registeredChars.findIndex(x=>x.charId===ch.charId);
     const d=charDataCache[idx];
-    if(!d?.loyaltyPoints?.length)return`<div class="lp-card"><div class="lp-card-header"><span class="lp-char-name">${c.charName}</span><span class="lp-total">No LP data</span></div></div>`;
-    const totalLP=d.totalLP||0;
-    const totalVal=totalLP*LP_RATE;
+    if(!d?.loyaltyPoints?.length)return`<div class="lp-card"><div class="lp-card-header"><span class="lp-char-name">${ch.charName}</span><span class="lp-total">No LP data</span></div></div>`;
+
     const sorted=[...d.loyaltyPoints].sort((a,b)=>b.loyalty_points-a.loyalty_points);
+    const totalLP=d.totalLP||0;
+
+    // 주 팩션 선택 (기본: LP 가장 많은 팩션)
+    if(!lpMainFaction[ch.charId]&&sorted.length){
+      lpMainFaction[ch.charId]=sorted[0].corporation_id;
+      saveLpSettings();
+    }
+    const mainCorpId=lpMainFaction[ch.charId]||sorted[0]?.corporation_id;
+    const totalVal=sorted.reduce((s,l)=>s+l.loyalty_points*getLpRate(l.corporation_id),0);
+
+    const rows=sorted.map(l=>{
+      const corpId=l.corporation_id;
+      const name=d.lpCorpNames?.[corpId]||`Corp ${corpId}`;
+      const s=lpSettings[corpId]||{};
+      const factionGroup=CORP_FACTION_GROUP[corpId];
+      const defaultItem=NET_RESONATOR_NAMES[factionGroup]||'';
+      const itemVal=s.itemName!==undefined?s.itemName:defaultItem;
+      const priceTypeVal=s.priceType||'sell';
+      const manualVal=s.manualRate||'';
+      const rate=getLpRate(corpId);
+      const val=l.loyalty_points*rate;
+      const isMain=corpId===mainCorpId;
+
+      return`<div class="lp-row" style="flex-direction:column;align-items:stretch;padding:8px 1rem;gap:6px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button onclick="setMainFaction('${ch.charId}',${corpId})" style="width:8px;height:8px;border-radius:50%;background:${isMain?'var(--accent3)':'var(--border2)'};border:none;cursor:pointer;padding:0;flex-shrink:0;" title="${t('mainFaction')}"></button>
+            <span class="lp-faction" style="${isMain?'color:var(--accent3);font-weight:600;':''}">${name}</span>
+          </div>
+          <div style="text-align:right;">
+            <div class="lp-pts">${fmtNum(l.loyalty_points)} LP · <span style="color:var(--text3);font-size:9px;">${rate.toLocaleString()} ISK/LP</span></div>
+            <div class="lp-val">${fmtISK(val)} ISK</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+          <input type="text" placeholder="${t('item')}" value="${itemVal}" 
+            style="flex:1;min-width:120px;background:var(--bg);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:10px;padding:4px 8px;outline:none;"
+            onchange="setLpItem(${corpId},this.value)">
+          <select onchange="setLpPriceType(${corpId},this.value)" 
+            style="background:var(--bg);border:1px solid var(--border);border-radius:3px;color:var(--text2);font-family:'Share Tech Mono',monospace;font-size:10px;padding:4px 6px;outline:none;">
+            <option value="sell" ${priceTypeVal==='sell'?'selected':''}>Sell</option>
+            <option value="buy" ${priceTypeVal==='buy'?'selected':''}>Buy</option>
+          </select>
+          <input type="number" placeholder="${t('manualRate')}" value="${manualVal}"
+            style="width:90px;background:var(--bg);border:1px solid var(--border);border-radius:3px;color:var(--gold);font-family:'Share Tech Mono',monospace;font-size:10px;padding:4px 8px;outline:none;text-align:right;"
+            onchange="setLpManualRate(${corpId},this.value)">
+          <button onclick="refreshLpRate(${corpId})" style="background:transparent;border:1px solid var(--border2);border-radius:3px;color:var(--text3);font-family:'Share Tech Mono',monospace;font-size:9px;padding:4px 8px;cursor:pointer;">↻</button>
+        </div>
+      </div>`;
+    }).join('');
+
     return`<div class="lp-card">
       <div class="lp-card-header">
         <div style="display:flex;align-items:center;gap:8px;">
-          <img src="https://images.evetech.net/characters/${c.charId}/portrait?size=32" style="width:24px;height:24px;border-radius:50%;" onerror="this.style.display='none'">
-          <span class="lp-char-name">${c.charName}</span>
+          <img src="https://images.evetech.net/characters/${ch.charId}/portrait?size=32" style="width:24px;height:24px;border-radius:50%;" onerror="this.style.display='none'">
+          <span class="lp-char-name">${ch.charName}</span>
         </div>
         <div style="text-align:right;">
           <div class="lp-total">${fmtNum(totalLP)} LP total</div>
           <div style="font-family:'Rajdhani',sans-serif;font-size:13px;color:var(--gold);">${fmtISK(totalVal)} ISK</div>
         </div>
       </div>
-      ${sorted.map(l=>{const name=d.lpCorpNames?.[l.corporation_id]||`Corp ${l.corporation_id}`;const val=l.loyalty_points*LP_RATE;return`<div class="lp-row">
-        <span class="lp-faction">${name}</span>
-        <div style="text-align:right;">
-          <div class="lp-pts">${fmtNum(l.loyalty_points)} LP</div>
-          <div class="lp-val">${fmtISK(val)} ISK</div>
-        </div>
-      </div>`;}).join('')}
+      ${rows}
     </div>`;
   }).join('');
 
   container.innerHTML=`<div class="lp-table-wrap">${cards}</div>`;
+}
+
+function setMainFaction(charId,corpId){
+  lpMainFaction[charId]=corpId;
+  saveLpSettings();
+  renderLP();
+}
+function setLpItem(corpId,name){
+  if(!lpSettings[corpId])lpSettings[corpId]={};
+  lpSettings[corpId].itemName=name;
+  lpSettings[corpId].manualRate=0;
+  saveLpSettings();
+}
+function setLpPriceType(corpId,type){
+  if(!lpSettings[corpId])lpSettings[corpId]={};
+  lpSettings[corpId].priceType=type;
+  saveLpSettings();
+}
+function setLpManualRate(corpId,val){
+  if(!lpSettings[corpId])lpSettings[corpId]={};
+  lpSettings[corpId].manualRate=parseFloat(val)||0;
+  saveLpSettings();
+  renderLP();
+}
+async function refreshLpRate(corpId){
+  if(!lpSettings[corpId])lpSettings[corpId]={};
+  lpSettings[corpId].manualRate=0;
+  await updateLpRate(corpId);
+  renderLP();
 }
 
 // ── OVERVIEW CHARTS ──
@@ -762,7 +1070,13 @@ function renderOverviewCharts(){
   const typeMap={};inc.forEach(e=>{const t=e.ref_type||'other';typeMap[t]=(typeMap[t]||0)+parseFloat(e.amount||0);});
   const tColors=['#00d4ff','#00ff99','#ffaa00','#ff4488','#aa88ff','#44ccff','#88ffcc','#ffcc44'];
   destroyChart('chart-type');
-  charts['chart-type']=new Chart(document.getElementById('chart-type'),{type:'doughnut',data:{labels:Object.keys(typeMap).map(l=>l.replace(/_/g,' ')),datasets:[{data:Object.values(typeMap).map(v=>Math.round(v/1e6*100)/100),backgroundColor:tColors,borderWidth:1,borderColor:'#071624'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.parsed.toFixed(2)}M`}}}}});
+  const typeLabels=Object.keys(typeMap).map(l=>l.replace(/_/g,' '));
+  const typeVals=Object.values(typeMap).map(v=>Math.round(v/1e6*100)/100);
+  const typeTotal=typeVals.reduce((s,v)=>s+v,0);
+  charts['chart-type']=new Chart(document.getElementById('chart-type'),{type:'doughnut',data:{labels:typeLabels,datasets:[{data:typeVals,backgroundColor:tColors,borderWidth:1,borderColor:'#071624'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.parsed.toFixed(2)}M`}}}}});
+  // 범례 렌더링
+  const legendEl=document.getElementById('chart-type-legend');
+  if(legendEl){legendEl.innerHTML=typeLabels.map((l,i)=>{const pct=typeTotal>0?(typeVals[i]/typeTotal*100).toFixed(1):0;return`<div style="display:flex;align-items:center;gap:5px;margin-bottom:5px;"><span style="width:8px;height:8px;border-radius:2px;background:${tColors[i]};flex-shrink:0;"></span><span style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text2);line-height:1.3;">${l}<br><span style="color:var(--accent)">${fmtISK(typeVals[i]*1e6)} (${pct}%)</span></span></div>`;}).join('');}
 
   const dates=[...new Set(filtered.map(e=>e.date.slice(0,10)))].sort();
   const dInc={},dExp={};
@@ -775,7 +1089,7 @@ function renderOverviewCharts(){
   const allC=[...new Set([...Object.keys(cInc),...Object.keys(cExp)])];
   destroyChart('chart-chars');
   charts['chart-chars']=new Chart(document.getElementById('chart-chars'),{type:'bar',data:{labels:allC,datasets:[{label:'Income',data:allC.map(c=>Math.round((cInc[c]||0)/1e4)/100),backgroundColor:'rgba(0,255,153,0.7)',borderRadius:2},{label:'Expense',data:allC.map(c=>-Math.round((cExp[c]||0)/1e4)/100),backgroundColor:'rgba(255,68,102,0.7)',borderRadius:2},{label:'Net',data:allC.map(c=>Math.round(((cInc[c]||0)-(cExp[c]||0))/1e4)/100),backgroundColor:'rgba(0,212,255,0.7)',borderRadius:2}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#6a9ab8',font:{size:10},boxWidth:10}}},scales:{x:{ticks:{color:'#3a6a88',font:{size:9},callback:v=>v+'M'},grid:{color:'rgba(14,58,90,0.2)'}},y:{ticks:{color:'#6a9ab8',font:{size:11}},grid:{display:false}}}}});
-  document.getElementById('table-chars').innerHTML=`<thead><tr><th>#</th><th>Character</th><th style="text-align:right;color:var(--accent3)">Income</th><th style="text-align:right;color:var(--danger)">Expense</th><th style="text-align:right;color:var(--accent)">Net</th></tr></thead><tbody>${allC.sort((a,b)=>(cInc[b]||0)-(cInc[a]||0)).map((c,i)=>{const i2=cInc[c]||0,e2=cExp[c]||0,n2=i2-e2;return`<tr><td style="color:var(--text3);font-family:'Share Tech Mono',monospace;font-size:11px">${i+1}</td><td>${c}</td><td class="num" style="color:var(--accent3)">+${fmtISK(i2)}</td><td class="num" style="color:var(--danger)">${e2>0?'-'+fmtISK(e2):'—'}</td><td class="num" style="color:${n2>=0?'var(--accent)':'var(--danger)'}">${n2>=0?'+':''}${fmtISK(n2)}</td></tr>`;}).join('')}</tbody>`;
+  document.getElementById('table-chars').innerHTML=`<thead><tr><th>#</th><th>${t('char')}</th><th style="text-align:right;color:var(--accent3)">${t('income')}</th><th style="text-align:right;color:var(--danger)">${t('expense')}</th><th style="text-align:right;color:var(--accent)">${t('net')}</th></tr></thead><tbody>${allC.sort((a,b)=>(cInc[b]||0)-(cInc[a]||0)).map((c,i)=>{const i2=cInc[c]||0,e2=cExp[c]||0,n2=i2-e2;return`<tr><td style="color:var(--text3);font-family:'Share Tech Mono',monospace;font-size:11px">${i+1}</td><td>${c}</td><td class="num" style="color:var(--accent3)">+${fmtISK(i2)}</td><td class="num" style="color:var(--danger)">${e2>0?'-'+fmtISK(e2):'—'}</td><td class="num" style="color:${n2>=0?'var(--accent)':'var(--danger)'}">${n2>=0?'+':''}${fmtISK(n2)}</td></tr>`;}).join('')}</tbody>`;
 }
 
 // ── CHAR LIST ──
@@ -808,17 +1122,30 @@ function switchPage(p){
   if(p==='assets')renderAssets();
   if(p==='journal')renderJournal();
   if(p==='orders')renderOrders().catch(console.error);
-  if(p==='lp')renderLP();
+  if(p==='lp'){
+    // 기본 NET Resonator 설정 초기화
+    initDefaultLpSettings();
+    renderLP();
+  }
 }
 
 function setPeriod(d){currentPeriod=d;document.querySelectorAll('.pb').forEach((b,i)=>b.classList.toggle('active',[7,14,30][i]===d));renderOverviewCharts();}
 
-function renderAll(){renderCharList();recalcTotal();renderOverviewCharts();}
+function renderAll(){
+  applyLang();
+  renderCharList();
+  recalcTotal();
+  renderOverviewCharts();
+}
 
 // ── INIT ──
 async function init(){
   loadNameCache();
-  loadSpPrices(); // SP 시장가 미리 로드 (백그라운드)
+  loadLpSettings();
+  // 언어 로드
+  currentLang=localStorage.getItem(LANG_KEY)||'ko';
+  document.getElementById('lang-select').value=currentLang;
+  loadSpPrices();
   document.getElementById('login-screen').classList.add('visible');
   const code=new URLSearchParams(location.search).get('code');
   if(code){const ok=await handleCallback();if(!ok){hideLoading();return;}}
@@ -854,7 +1181,8 @@ async function init(){
   setStatus(true);
   renderAll();
   hideLoading();
-  showToast(`Loaded ${registeredChars.length} character(s)`,'success');
+  initDefaultLpSettings();
+  showToast(currentLang==='ko'?`${registeredChars.length}명 로드 완료`:`Loaded ${registeredChars.length} character(s)`,'success');
 }
 
 document.getElementById('journal-search').addEventListener('input',renderJournal);
