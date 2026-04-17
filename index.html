@@ -194,28 +194,42 @@ main{max-width:1440px;margin:0 auto;padding:1.5rem 2rem;}
 
   <!-- 메인 NAV -->
   <div class="nav-tabs">
-    <button class="nav-tab active" onclick="switchPage('overview')">Overview</button>
-    <button class="nav-tab" onclick="switchPage('assets')">Assets</button>
-    <button class="nav-tab" onclick="switchPage('journal')">Journal</button>
-    <button class="nav-tab" onclick="switchPage('orders')">Orders & Contracts</button>
+    <button class="nav-tab active" onclick="switchPage('overview')">개요</button>
+    <button class="nav-tab" onclick="switchPage('mission')">Mission</button>
+    <button class="nav-tab" onclick="switchPage('assets')">자산</button>
+    <button class="nav-tab" onclick="switchPage('journal')">저널</button>
+    <button class="nav-tab" onclick="switchPage('orders')">오더 & 계약</button>
     <button class="nav-tab" onclick="switchPage('lp')">LP</button>
   </div>
 
   <!-- ── OVERVIEW ── -->
   <div id="page-overview">
-    <div class="hero">
-      <div class="hero-lbl">Total Portfolio Value</div>
-      <div><span class="hero-val" id="hero-total">—</span><span class="hero-unit">ISK</span></div>
-      <div class="hero-sub" id="hero-sub">Calculating...</div>
-      <div style="margin-top:1rem;">
-        <div class="toggle-bar">
-          <label class="ti all-toggle"><input type="checkbox" id="tog-all" checked onchange="toggleAll(this)"> ALL</label>
-          <label class="ti"><input type="checkbox" id="tog-wallet" checked onchange="recalcTotal()"> Wallet</label>
-          <label class="ti"><input type="checkbox" id="tog-assets" checked onchange="recalcTotal()"> Assets</label>
-          <label class="ti"><input type="checkbox" id="tog-orders" checked onchange="recalcTotal()"> Orders</label>
-          <label class="ti"><input type="checkbox" id="tog-contracts" checked onchange="recalcTotal()"> Contracts</label>
-          <label class="ti"><input type="checkbox" id="tog-lp" checked onchange="recalcTotal()"> LP Value</label>
-          <label class="ti"><input type="checkbox" id="tog-sp" checked onchange="recalcTotal()"> SP Value <span id="sp-basis-text" style="color:var(--text3);font-size:9px;margin-left:4px;">(loading...)</span></label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.25rem;">
+      <!-- 총 포트폴리오 -->
+      <div class="hero" style="margin-bottom:0;">
+        <div class="hero-lbl" id="lbl-total-portfolio">총 포트폴리오 가치</div>
+        <div><span class="hero-val" id="hero-total">—</span><span class="hero-unit">ISK</span></div>
+        <div class="hero-sub" id="hero-sub">계산 중...</div>
+        <div style="margin-top:1rem;">
+          <div class="toggle-bar">
+            <label class="ti all-toggle"><input type="checkbox" id="tog-all" checked onchange="toggleAll(this)"> ALL</label>
+            <label class="ti"><input type="checkbox" id="tog-wallet" checked onchange="recalcTotal()"> 지갑</label>
+            <label class="ti"><input type="checkbox" id="tog-assets" checked onchange="recalcTotal()"> 자산+오더+계약</label>
+            <label class="ti"><input type="checkbox" id="tog-lp" checked onchange="recalcTotal()"> LP <span id="sp-basis-text2" style="color:var(--text3);font-size:9px;"></span></label>
+            <label class="ti"><input type="checkbox" id="tog-sp" onchange="recalcTotal()"> SP <span id="sp-basis-text" style="color:var(--text3);font-size:9px;margin-left:2px;">(loading...)</span></label>
+          </div>
+        </div>
+      </div>
+      <!-- 30일 수입 -->
+      <div class="hero" style="margin-bottom:0;">
+        <div class="hero-lbl" id="lbl-30d-income">30일 총 수입</div>
+        <div><span class="hero-val" id="hero-income30">—</span><span class="hero-unit">ISK</span></div>
+        <div class="hero-sub" id="hero-income-sub">—</div>
+        <div style="margin-top:1rem;">
+          <div class="toggle-bar">
+            <label class="ti" style="color:var(--gold);"><input type="checkbox" id="tog-income-lp" checked onchange="recalc30Income()"> 추정 LP 소득 포함</label>
+            <label class="ti" style="color:var(--gold);"><input type="checkbox" id="tog-income-sp" onchange="recalc30Income()"> SP 소득 포함</label>
+          </div>
         </div>
       </div>
     </div>
@@ -246,6 +260,20 @@ main{max-width:1440px;margin:0 auto;padding:1.5rem 2rem;}
       <div class="ph"><span class="pt">Character P&amp;L</span></div>
       <div style="padding:1rem;"><div class="chart-wrap" style="height:180px;"><canvas id="chart-chars" role="img" aria-label="Char PnL"></canvas></div></div>
       <div class="ts"><table class="data-table" id="table-chars"></table></div>
+    </div>
+  </div>
+
+  <!-- ── MISSION ── -->
+  <div id="page-mission" style="display:none;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:1.25rem;" id="mission-summary"></div>
+    <div class="panel">
+      <div class="ph">
+        <span class="pt">미션 일별 기록 (최근 30일)</span>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <div class="sub-tabs" id="mission-char-tabs" style="margin-bottom:0;"></div>
+        </div>
+      </div>
+      <div class="ts"><table class="data-table" id="table-mission"></table></div>
     </div>
   </div>
 
@@ -326,6 +354,94 @@ const NET_RESONATOR={
   blood:'Blood Raider NET Resonator',
   mordu:'Mordu NET Resonator',
 };
+// 팩션그룹 → NPC 콥 ID (LP Store 조회용, 대표 콥)
+const FACTION_CORP_ID={
+  guristas:1000010, sansha:1000005, serpentis:1000013,
+  angel:1000012, blood:1000006, mordu:1000108,
+};
+const LP_PRICE_CACHE_KEY='ewr_lp_price_cache';
+let lpPriceCache={}; // corpId -> {rate, ts}
+
+function loadLpPriceCache(){
+  try{lpPriceCache=JSON.parse(localStorage.getItem(LP_PRICE_CACHE_KEY)||'{}');}catch(e){}
+}
+function saveLpPriceCache(){
+  try{localStorage.setItem(LP_PRICE_CACHE_KEY,JSON.stringify(lpPriceCache));}catch(e){}
+}
+const LP_CACHE_TTL=86400000; // 24시간
+
+async function fetchLpStoreOffer(corpId, itemName){
+  // LP Store에서 해당 아이템 찾기
+  try{
+    const r=await fetch(`${ESI}/loyalty/stores/${corpId}/offers/`);
+    if(!r.ok)return null;
+    const offers=await r.json();
+    // 이름 조회
+    const typeIds=[...new Set(offers.map(o=>o.type_id))];
+    await resolveTypeNames(typeIds.slice(0,200));
+    const offer=offers.find(o=>nameCache.types[o.type_id]?.toLowerCase()===itemName.toLowerCase());
+    return offer||null;
+  }catch(e){return null;}
+}
+
+async function calcLpRate(corpId){
+  // 캐시 확인
+  const cached=lpPriceCache[corpId];
+  if(cached&&Date.now()-cached.ts<LP_CACHE_TTL)return cached.rate;
+
+  const s=lpSettings[corpId]||{};
+  // 수동 입력값 우선
+  if(s.manualRate>0){
+    lpPriceCache[corpId]={rate:s.manualRate,ts:Date.now()};
+    saveLpPriceCache();
+    return s.manualRate;
+  }
+
+  const grp=CORP_GROUP[corpId];
+  const itemName=s.itemName||(grp?NET_RESONATOR[grp]:'');
+  if(!itemName)return DEFAULT_LP_RATE;
+
+  // LP Store 오퍼 조회
+  const facCorpId=FACTION_CORP_ID[grp]||corpId;
+  showLoading(`LP 가격 조회 중: ${itemName}...`);
+  const offer=await fetchLpStoreOffer(facCorpId, itemName);
+  if(!offer){hideLoading();return DEFAULT_LP_RATE;}
+
+  const lpCost=offer.lp_cost||1000;
+  const iskCost=offer.isk_cost||0;
+
+  // Jita sell 가격
+  const sellPrice=await fetchJitaPrice(offer.type_id,'sell');
+  hideLoading();
+
+  if(sellPrice<=0)return DEFAULT_LP_RATE;
+  // (판매가 - ISK비용) / LP비용
+  const rate=Math.round((sellPrice-iskCost)/lpCost);
+  const finalRate=rate>0?rate:DEFAULT_LP_RATE;
+
+  lpSettings[corpId]={...s,rate:finalRate,typeId:offer.type_id,
+    lpCost,iskCost,sellPrice,itemName};
+  saveLpSettings();
+  lpPriceCache[corpId]={rate:finalRate,ts:Date.now()};
+  saveLpPriceCache();
+  return finalRate;
+}
+
+async function refreshAllLpRates(){
+  const corpIds=new Set();
+  registeredChars.forEach((_,i)=>{
+    const d=charDataCache[i];
+    if(d?.loyaltyPoints)d.loyaltyPoints.forEach(l=>corpIds.add(l.corporation_id));
+  });
+  for(const cid of corpIds){
+    // 캐시 무효화 후 재조회
+    delete lpPriceCache[cid];
+    await calcLpRate(cid);
+  }
+  saveLpPriceCache();
+  renderLP();
+  recalcTotal();
+}
 // corp_id → 팩션그룹
 const CORP_GROUP={
   1000010:'guristas',1000127:'guristas',
@@ -398,6 +514,9 @@ function saveLpSettings(){
   try{localStorage.setItem(LP_SETTINGS_KEY,JSON.stringify({s:lpSettings,m:lpMainFaction}));}catch(e){}
 }
 function getLpRate(corpId){
+  // 캐시 우선
+  const cached=lpPriceCache[corpId];
+  if(cached&&Date.now()-cached.ts<LP_CACHE_TTL)return cached.rate;
   const s=lpSettings[corpId];
   if(!s)return DEFAULT_LP_RATE;
   if(s.manualRate>0)return s.manualRate;
@@ -571,12 +690,12 @@ async function loadCharData(idx,token){
 
 // ── TOGGLE ALL ──
 function toggleAll(cb){
-  const ids=['tog-wallet','tog-assets','tog-orders','tog-contracts','tog-lp','tog-sp'];
+  const ids=['tog-wallet','tog-assets','tog-lp','tog-sp'];
   ids.forEach(id=>{document.getElementById(id).checked=cb.checked;});
   recalcTotal();
 }
 function syncAllToggle(){
-  const ids=['tog-wallet','tog-assets','tog-orders','tog-contracts','tog-lp','tog-sp'];
+  const ids=['tog-wallet','tog-assets','tog-lp','tog-sp'];
   const allChecked=ids.every(id=>document.getElementById(id).checked);
   document.getElementById('tog-all').checked=allChecked;
 }
@@ -585,17 +704,56 @@ function syncAllToggle(){
 function recalcTotal(){
   syncAllToggle();
   const tw=document.getElementById('tog-wallet').checked;
-  const ta=document.getElementById('tog-assets').checked;
-  const to=document.getElementById('tog-orders').checked;
-  const tc=document.getElementById('tog-contracts').checked;
+  const ta=document.getElementById('tog-assets').checked; // assets+orders+contracts
   const tl=document.getElementById('tog-lp').checked;
   const ts=document.getElementById('tog-sp').checked;
   let total=0;
-  registeredChars.forEach((_,i)=>{const d=charDataCache[i];if(!d)return;if(tw)total+=d.walletBalance||0;if(ta)total+=d.assetValue||0;if(to)total+=d.orderValue||0;if(tc)total+=d.contractValue||0;if(tl)total+=(d.loyaltyPoints||[]).reduce((s,l)=>s+l.loyalty_points*getLpRate(l.corporation_id),0);if(ts)total+=getSpValue(d.totalSP||0);});
+  registeredChars.forEach((_,i)=>{
+    const d=charDataCache[i];if(!d)return;
+    if(tw)total+=d.walletBalance||0;
+    if(ta){total+=d.assetValue||0;total+=d.orderValue||0;total+=d.contractValue||0;}
+    if(tl)total+=(d.loyaltyPoints||[]).reduce((s,l)=>s+l.loyalty_points*getLpRate(l.corporation_id),0);
+    if(ts)total+=getSpValue(d.totalSP||0);
+  });
   document.getElementById('hero-total').textContent=fmtISK(total);
-  const parts=[];if(tw)parts.push('Wallet');if(ta)parts.push('Assets');if(to)parts.push('Orders');if(tc)parts.push('Contracts');if(tl)parts.push('LP');if(ts)parts.push('SP');
-  document.getElementById('hero-sub').textContent=`Includes: ${parts.join(' · ')} · ${registeredChars.length} char(s)`;
+  const parts=[];if(tw)parts.push('지갑');if(ta)parts.push('자산+오더+계약');if(tl)parts.push('LP');if(ts)parts.push('SP');
+  document.getElementById('hero-sub').textContent=`포함: ${parts.join(' · ')} · ${registeredChars.length}명`;
+  recalc30Income();
   renderCharBreakdown();
+}
+
+function recalc30Income(){
+  const all=getAllJournal();
+  const filtered=filterByPeriod(all,30);
+  const inc=filtered.filter(e=>parseFloat(e.amount||0)>0);
+  const totalInc=inc.reduce((s,e)=>s+parseFloat(e.amount||0),0);
+  // 추정 LP 소득
+  let estLP=0;
+  if(document.getElementById('tog-income-lp')?.checked){
+    registeredChars.forEach((ch,i)=>{
+      const d=charDataCache[i];if(!d?.journal)return;
+      const jf=filterByPeriod(d.journal,30);
+      const mISK=jf.filter(e=>e.ref_type==='agent_mission_reward').reduce((s,e)=>s+parseFloat(e.amount||0),0);
+      const estLPamt=mISK/MISSION_ISK_PER_LP;
+      const mainCid=lpMainFaction[ch.charId];
+      estLP+=estLPamt*getLpRate(mainCid||0);
+    });
+  }
+  // SP 소득 (현재 SP 가치)
+  let spVal=0;
+  if(document.getElementById('tog-income-sp')?.checked){
+    registeredChars.forEach((_,i)=>{const d=charDataCache[i];if(d)spVal+=getSpValue(d.totalSP||0);});
+  }
+  const total30=totalInc+estLP+spVal;
+  const el=document.getElementById('hero-income30');
+  if(el)el.textContent=fmtISK(total30);
+  const sub=document.getElementById('hero-income-sub');
+  if(sub){
+    const parts=['저널 수입'];
+    if(estLP>0)parts.push(`+LP추정 ${fmtISK(estLP)}`);
+    if(spVal>0)parts.push(`+SP ${fmtISK(spVal)}`);
+    sub.textContent=parts.join(' ');
+  }
 }
 
 // ── CHAR BREAKDOWN ──
@@ -629,6 +787,119 @@ function renderCharBreakdown(){
     const rows=[];registeredChars.forEach((c,i)=>{const d=charDataCache[i];if(c.walletType==='corp'&&d?.corpDivisions)d.corpDivisions.forEach(dv=>rows.push(`<tr><td style="color:var(--text2)">${c.charName}</td><td style="font-family:'Share Tech Mono',monospace">Div ${dv.division}</td><td class="num" style="color:var(--accent3)">${fmtISK(dv.balance)} ISK</td></tr>`));});
     document.getElementById('corp-div-table').innerHTML=`<thead><tr><th>Character</th><th>Division</th><th style="text-align:right">Balance</th></tr></thead><tbody>${rows.join('')}</tbody>`;
   }
+}
+
+
+// ── MISSION ──
+let activeMissionChar='all';
+
+function analyzeMissions(journalEntries){
+  // agent_mission_reward만 추출
+  const rewards=journalEntries
+    .filter(e=>e.ref_type==='agent_mission_reward'&&parseFloat(e.amount||0)>0)
+    .map(e=>({
+      date:e.date,
+      ts:new Date(e.date).getTime(),
+      amount:parseFloat(e.amount||0),
+      charName:e.charName||'',
+      charId:e.charId||0,
+      id:e.id
+    }))
+    .sort((a,b)=>a.ts-b.ts);
+
+  // 중복 감지: 시간차 ≤1초, ISK차 ≤1 → 동일 미션
+  const missions=[]; // {ts, amount, chars:[], estLP}
+  const used=new Set();
+
+  for(let i=0;i<rewards.length;i++){
+    if(used.has(i))continue;
+    const group=[rewards[i]];
+    used.add(i);
+    for(let j=i+1;j<rewards.length;j++){
+      if(used.has(j))continue;
+      const dt=Math.abs(rewards[j].ts-rewards[i].ts);
+      const da=Math.abs(rewards[j].amount-rewards[i].amount);
+      if(dt<=1000&&da<=1){
+        group.push(rewards[j]);
+        used.add(j);
+      }
+    }
+    const totalISK=group.reduce((s,r)=>s+r.amount,0);
+    missions.push({
+      ts:rewards[i].ts,
+      date:rewards[i].date.slice(0,10),
+      totalISK,
+      chars:group.map(r=>r.charName),
+      estLP:totalISK/MISSION_ISK_PER_LP,
+    });
+  }
+  return missions;
+}
+
+function setActiveMission(v){
+  activeMissionChar=v;
+  buildSubTabs('mission-char-tabs','activeMissionChar','renderMission','setActiveMission');
+  renderMission();
+}
+
+function renderMission(){
+  const all=getAllJournal();
+  const filtered=filterByPeriod(all,30);
+
+  let entries=filtered;
+  if(activeMissionChar!=='all')entries=entries.filter(e=>e.charName===activeMissionChar);
+
+  const missions=analyzeMissions(entries);
+
+  // 요약
+  const totalMissions=missions.length;
+  const totalISK=missions.reduce((s,m)=>s+m.totalISK,0);
+  const totalEstLP=missions.reduce((s,m)=>s+m.estLP,0);
+  // 주 팩션 LP rate
+  let mainRate=DEFAULT_LP_RATE;
+  if(registeredChars.length){
+    const mainCid=lpMainFaction[registeredChars[0].charId];
+    if(mainCid)mainRate=getLpRate(mainCid);
+  }
+  const totalEstLPVal=totalEstLP*mainRate;
+
+  document.getElementById('mission-summary').innerHTML=`
+    <div class="sc"><div class="sl">총 미션 수 (30일)</div><div class="sv" style="color:var(--accent)">${totalMissions.toLocaleString()}<span class="su">개</span></div></div>
+    <div class="sc"><div class="sl">미션 ISK 수입</div><div class="sv" style="color:var(--accent3)">${fmtISK(totalISK)}<span class="su">ISK</span></div></div>
+    <div class="sc"><div class="sl">추정 LP 획득</div><div class="sv" style="color:var(--gold)">${fmtNum(Math.round(totalEstLP))}<span class="su">LP</span></div></div>
+    <div class="sc"><div class="sl">추정 LP 가치</div><div class="sv" style="color:var(--gold)">${fmtISK(totalEstLPVal)}<span class="su">ISK</span></div><div class="ss">${mainRate.toLocaleString()} ISK/LP 기준</div></div>`;
+
+  // 날짜별 집계
+  const byDate={};
+  missions.forEach(m=>{
+    if(!byDate[m.date])byDate[m.date]={count:0,isk:0,lp:0};
+    byDate[m.date].count++;
+    byDate[m.date].isk+=m.totalISK;
+    byDate[m.date].lp+=m.estLP;
+  });
+
+  const dates=Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
+  const tm=document.getElementById('table-mission');
+  if(!dates.length){
+    tm.innerHTML='<tbody><tr><td colspan="5" class="empty">30일 내 미션 기록 없음</td></tr></tbody>';
+    return;
+  }
+  tm.innerHTML=`<thead><tr>
+    <th>날짜</th><th style="text-align:right">미션 수</th>
+    <th style="text-align:right">ISK 수입</th>
+    <th style="text-align:right">추정 LP</th>
+    <th style="text-align:right">LP 환산가치</th>
+  </tr></thead><tbody>${dates.map(d=>{
+    const r=byDate[d];
+    const lpVal=r.lp*mainRate;
+    return`<tr>
+      <td style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text2);">${d}</td>
+      <td class="num" style="color:var(--accent);">${r.count}개</td>
+      <td class="num" style="color:var(--accent3);">${fmtISK(r.isk)} ISK</td>
+      <td class="num" style="color:var(--gold);">${fmtNum(Math.round(r.lp))} LP</td>
+      <td class="num" style="color:var(--gold);">${fmtISK(lpVal)} ISK</td>
+    </tr>`;
+  }).join('')}</tbody>`;
 }
 
 // ── SUB TABS ──
@@ -854,29 +1125,13 @@ async function fetchJitaPrice(typeId,orderType){
 }
 
 async function refreshLpRate(corpId){
+  delete lpPriceCache[corpId]; // 캐시 강제 만료
   const s=lpSettings[corpId]||{};
-  if(s.manualRate>0)return;
-  const itemName=s.itemName||'';
-  if(!itemName){lpSettings[corpId]={...s,rate:DEFAULT_LP_RATE};saveLpSettings();renderLP();return;}
-  showLoading('Fetching price: '+itemName+'...');
-  try{
-    // ESI 검색으로 type_id 찾기
-    const sr=await fetch(`${ESI}/search/?categories=inventory_type&search=${encodeURIComponent(itemName)}&strict=true`);
-    if(!sr.ok)throw new Error('search fail');
-    const sd=await sr.json();
-    const ids=(sd.inventory_type||[]);
-    if(!ids.length){hideLoading();showToast('Item not found: '+itemName,'error');return;}
-    // 이름 확인
-    await resolveTypeNames(ids.slice(0,5));
-    const typeId=ids.find(id=>nameCache.types[id]?.toLowerCase()===itemName.toLowerCase())||ids[0];
-    const price=await fetchJitaPrice(typeId,s.priceType||'sell');
-    // NET Resonator LP 비용: 약 64,000 LP (팩션별 근사값)
-    const lpCost=64000;
-    lpSettings[corpId]={...s,typeId,itemPrice:price,rate:price>0?Math.round(price/lpCost):DEFAULT_LP_RATE};
-    saveLpSettings();
-  }catch(e){showToast('Price fetch error','error');}
-  hideLoading();
+  s.manualRate=0; // 수동값 초기화
+  lpSettings[corpId]=s;
+  await calcLpRate(corpId);
   renderLP();
+  recalcTotal();
 }
 
 function setLpItem(corpId,v){if(!lpSettings[corpId])lpSettings[corpId]={};lpSettings[corpId].itemName=v;lpSettings[corpId].manualRate=0;saveLpSettings();}
@@ -919,7 +1174,7 @@ function renderLP(){
             <span style="font-size:12px;color:${isMain?'var(--accent3)':'var(--text2)'};${isMain?'font-weight:600;':''}">${name}</span>
           </div>
           <div style="text-align:right;">
-            <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--gold);">${fmtNum(l.loyalty_points)} LP <span style="color:var(--text3);font-size:9px;">· ${rate.toLocaleString()} ISK/LP</span></div>
+            <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--gold);">${fmtNum(l.loyalty_points)} LP <span style="color:var(--text3);font-size:9px;">· ${rate.toLocaleString()} ISK/LP${s.sellPrice?` (${fmtISK(s.sellPrice)} sell / ${(s.lpCost||0).toLocaleString()}LP)`:''}</span></div>
             <div style="font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;color:var(--accent);">${fmtISK(val)} ISK</div>
           </div>
         </div>
@@ -1042,10 +1297,11 @@ function removeChar(idx){registeredChars.splice(idx,1);delete charDataCache[idx]
 
 function exportCSV(){const all=getAllJournal();if(!all.length){showToast('No data','error');return;}const keys=[...new Set(all.flatMap(e=>Object.keys(e)))];const csv=[keys.join(','),...all.map(e=>keys.map(k=>JSON.stringify(e[k]??'')).join(','))].join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=`ewr_${new Date().toISOString().slice(0,10)}.csv`;a.click();showToast('CSV exported','success');}
 
-const pages=['overview','assets','journal','orders','lp'];
+const pages=['overview','mission','assets','journal','orders','lp'];
 function switchPage(p){
   pages.forEach(x=>document.getElementById(`page-${x}`).style.display=x===p?'':'none');
   document.querySelectorAll('.nav-tab').forEach((t,i)=>t.classList.toggle('active',pages[i]===p));
+  if(p==='mission'){buildSubTabs('mission-char-tabs','activeMissionChar','renderMission','setActiveMission');renderMission();}
   if(p==='assets')renderAssets();
   if(p==='journal')renderJournal();
   if(p==='orders')renderOrders().catch(console.error);
@@ -1057,7 +1313,7 @@ function setPeriod(d){currentPeriod=d;document.querySelectorAll('.pb').forEach((
 function renderAll(){
   applyLangUI();
   renderCharList();
-  recalcTotal();
+  recalcTotal(); // recalc30Income 포함
   renderOverviewCharts();
 }
 
@@ -1105,7 +1361,21 @@ async function init(){
   setStatus(true);
   renderAll();
   hideLoading();
+  loadLpPriceCache();
   initLpDefaults();
+  // LP 가격 백그라운드 조회 (24시간 캐시)
+  setTimeout(async()=>{
+    const corpIds=new Set();
+    registeredChars.forEach((_,i)=>{
+      const d=charDataCache[i];
+      if(d?.loyaltyPoints)d.loyaltyPoints.forEach(l=>{
+        const grp=CORP_GROUP[l.corporation_id];
+        if(grp)corpIds.add(l.corporation_id);
+      });
+    });
+    for(const cid of corpIds){await calcLpRate(cid);}
+    recalcTotal();renderLP();
+  },500);
   showToast(currentLang==='ko'?`${registeredChars.length}명 로드 완료`:`Loaded ${registeredChars.length} character(s)`,'success');
 }
 
